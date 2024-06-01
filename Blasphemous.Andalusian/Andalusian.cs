@@ -1,6 +1,7 @@
 ﻿using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
 using I2.Loc;
+using JetBrains.Annotations;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
@@ -17,12 +18,15 @@ public class Andalusian : BlasMod
 
     private List<Language> languages = new List<Language>();
 
+    public LanguageConfig config { get; private set; }
+
     /// <summary>
     /// Detects each language file in the `\data` folder.
     /// Then load and replace text for each language
     /// </summary>
     protected override void OnInitialize()
     {
+        // load in all the custom language `.txt` files into language objects
         string[] allLanguageFilePaths = GetAllLanguageFilePaths();
         foreach (string filePath in allLanguageFilePaths)
         {
@@ -30,21 +34,42 @@ public class Andalusian : BlasMod
             Log($"language file at {filePath} detected");
         }
 
+        // load each langauge into the game
         foreach (Language language in languages)
         {
             LoadText(language);
             ReplaceText(language);
         }
 
+        // disable selected languages in the config file
+        config = ConfigHandler.Load<LanguageConfig>();
+        GetAllLanguageNamesAndCodes(out List<string> allLanguageNames, out List<string> allLanguageCodes);
+
+        foreach (string langName in config.disabledLanguages)
+        {
+            bool replaceSuccessful = false;
+            foreach (string langNameInGame in allLanguageNames)
+            {
+                if ( string.Equals(langNameInGame.ToLower().Trim(), langName.ToLower().Trim()) )
+                {
+                    RemoveLoadedLanguage(langName);
+                    Log($"successfully removed language named \"{langName}\" from the game!");
+                    replaceSuccessful = true;
+                    break;
+                }
+            }
+            if (!replaceSuccessful)
+            {
+                LogWarning($"failed disabling language: language named \"{langName}\" not found!");
+            }
+        }
+
         // display all current languages into log
-        LogWarning($"All loaded languages:\n");
-        LanguageSource source = LocalizationManager.Sources[0];
-        List<string> allLanguageNames = source.GetLanguages();
-        List<string> allLanguageCodes = source.GetLanguagesCode();
+        Log($"All loaded languages:\n");
         int numCurrentLanguages = allLanguageNames.Count;
         for (int i = 0; i < numCurrentLanguages; i++)
         {
-            Log($"#{i+1} loaded language-- \n language name: {allLanguageNames[i]}\n language code: {allLanguageCodes[i]}\n");
+            Log($"language[{i}] : \n language name: {allLanguageNames[i]}\n language code: {allLanguageCodes[i]}\n");
         }
     }
 
@@ -93,6 +118,18 @@ public class Andalusian : BlasMod
         Log($"Successfully added {count} terms for {lang.NAME} translation");
     }
 
+    /// <summary>
+    /// remove the current language from the game.
+    /// </summary>
+    /// <param name="langName">name of language to remove</param>
+    private void RemoveLoadedLanguage(string langName)
+    {
+        foreach (LanguageSource source in LocalizationManager.Sources)
+        {
+            source.RemoveLanguage(langName);
+        }
+    }
+
     
 
     /// <summary>
@@ -103,6 +140,18 @@ public class Andalusian : BlasMod
         string dataPath = Path.GetFullPath(@"Modding/data/" + ModInfo.MOD_NAME + @"/");
         string[] allLanguageFilePaths = Directory.GetFiles(dataPath, "*.txt");
         return allLanguageFilePaths;
+    }
+
+    /// <summary>
+    /// Get all the languages' (including vanilla languages) language names and codes into lists.
+    /// </summary>
+    /// <param name="names">all language names</param>
+    /// <param name="codes">all language codes</param>
+    private void GetAllLanguageNamesAndCodes(out List<string> names, out List<string> codes)
+    {
+        LanguageSource source = LocalizationManager.Sources[0];
+        names = source.GetLanguages();
+        codes = source.GetLanguagesCode();
     }
 }
 
