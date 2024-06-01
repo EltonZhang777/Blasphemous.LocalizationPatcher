@@ -7,14 +7,14 @@ using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using UnityEngine.Windows.Speech;
 
-namespace Blasphemous.Andalusian;
+namespace Blasphemous.LocalizationPatcher;
 
 /// <summary>
 /// Handles loading andalusian text and adding it to localization manager
 /// </summary>
-public class Andalusian : BlasMod
+public class LocalizationPatcher : BlasMod
 {
-    internal Andalusian() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
+    internal LocalizationPatcher() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
 
     private List<Language> languages = new List<Language>();
 
@@ -34,11 +34,11 @@ public class Andalusian : BlasMod
             Log($"language file at {filePath} detected");
         }
 
-        // load each langauge into the game
+        // load each custom langauge into the game
         foreach (Language language in languages)
         {
             LoadText(language);
-            ReplaceText(language);
+            ReplaceAllText(language);
         }
 
         // disable selected languages in the config file
@@ -96,7 +96,7 @@ public class Andalusian : BlasMod
         Log($"loaded {lang.CONTENTS.Count} strings of {lang.NAME}");
     }
 
-    private void ReplaceText(Language lang)
+    private void ReplaceAllText(Language lang)
     {
         int count = 0;
 
