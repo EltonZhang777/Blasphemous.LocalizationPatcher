@@ -26,28 +26,28 @@ public class Andalusian : BlasMod
         string[] allLanguageFilePaths = GetAllLanguageFilePaths();
         foreach (string filePath in allLanguageFilePaths)
         {
-            Log("1");
             languages.Add(new Language(filePath));
             Log($"language file at {filePath} detected");
         }
 
         foreach (Language language in languages)
         {
-            Log($"processing {language.NAME}");
             LoadText(language);
             ReplaceText(language);
         }
 
-        // debug lines
+        // display all current languages into log
+        LogWarning($"All loaded languages:\n");
         LanguageSource source = LocalizationManager.Sources[0];
         List<string> allLanguageNames = source.GetLanguages();
         List<string> allLanguageCodes = source.GetLanguagesCode();
         int numCurrentLanguages = allLanguageNames.Count;
         for (int i = 0; i < numCurrentLanguages; i++)
         {
-            LogWarning($"#{i+1} loaded language-- \n language name: {allLanguageNames[i]}\n language code: {allLanguageCodes[i]}\n\n");
+            Log($"#{i+1} loaded language-- \n language name: {allLanguageNames[i]}\n language code: {allLanguageCodes[i]}\n");
         }
     }
+
 
     private void LoadText(Language lang)
     {
@@ -126,11 +126,6 @@ public class Language
     }
 
     /// <summary>
-    /// load in the text contents for the language
-    /// </summary>
-    
-
-    /// <summary>
     /// the name of the language
     /// </summary>
     public string NAME;
@@ -151,7 +146,9 @@ public class Language
     public string FILE_NAME;
 
     /// <summary>
-    /// all the text content of the language
+    /// All the terms of the language as a dictionary.
+    /// Key: term key; 
+    /// Value: term text
     /// </summary>
     public Dictionary<string, string> CONTENTS = new Dictionary<string, string>();
 
