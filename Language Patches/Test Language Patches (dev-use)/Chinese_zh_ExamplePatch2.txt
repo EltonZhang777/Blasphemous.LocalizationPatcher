@@ -1,0 +1,3 @@
+Prayer/PR03_CAPTION -> Replace : 蓝长直直直
+Prayer/PR03_CAPTION -> AppendAtEnd : （悲）
+Prayer/PR03_DESCRIPTION -> AppendAtBeginning : @小小换个行@

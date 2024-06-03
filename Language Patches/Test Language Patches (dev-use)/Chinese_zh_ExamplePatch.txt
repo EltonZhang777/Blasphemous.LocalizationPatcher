@@ -1,0 +1,8 @@
+Prayer/PR03_CAPTION -> Replace : 蓝长直
+Prayer/PR03_CAPTION -> NonexistentOperation : test2
+Prayer/PR03_CAPTION -> AppendAtEnd : （乐）
+Prayer/PR03_DESCRIPTION -> Replace : 啊咚咚咚咚
+Prayer/PR03_DESCRIPTION -> AppendAtBeginning : 轮椅祷文
+Prayer/PR03_DESCRIPTION -> AppendAtEnd : 早就该削了
+Prayer/PR01_CAPTION -> AppendAtEnd : 废物，不如抖刀术
+UI_Inventory/GRID_LABEL_PRAYERS -> Replace : 开祷！
