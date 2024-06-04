@@ -1,14 +1,20 @@
-# Blasphemous Andalusian
-
-<img src="https://img.shields.io/github/downloads/BrandenEK/Blasphemous.Andalusian/total?color=6495ED&style=for-the-badge">
-
+# Blasphemous LocalizationPatcher
 ---
 
 ## Features
 
-- Adds the Andalusian language as a selectable option in the language menu
-- Translates all of the text in the game, including UI and dialogue
+- Supports adding custom language localization to Blasphemous
+- Supports editing existing localization texts by customizable patches
+ - supports customized patching order
+- Supports disabling languages (vanilla or custom languages) by editing the config file `LocalizationPatcher.cfg`	
+
+
+## Planned Features
+
+- console command support
+- disable individual patches through config file
 
 ## Credits
 
-- The vast majority of credit for this mod goes to E. Lucía Ruiz (LuceScarlet) and SteveBass7 for translating all of the base game text
+- This mod is built on [Damocles](https://github.com/BrandenEK/)' mod [Blasphemous.Andalusian](https://github.com/BrandenEK/Blasphemous.Andalusian)
+- Andalusian language translated by E. Lucía Ruiz (LuceScarlet) and SteveBass7
