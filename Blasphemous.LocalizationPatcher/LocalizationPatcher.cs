@@ -1,7 +1,10 @@
-﻿using Blasphemous.ModdingAPI;
+﻿using BepInEx.Logging;
+using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
+using Framework.FrameworkCore;
 using I2.Loc;
 using JetBrains.Annotations;
+using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
@@ -18,7 +21,14 @@ public class LocalizationPatcher : BlasMod
 {
     internal LocalizationPatcher() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
 
-    private List<Language> languages = new List<Language>();
+    private List<LanguagePatch> languagePatches = new List<LanguagePatch>();
+
+    private List<CompiledLanguage> compiledLanguages = new List<CompiledLanguage>();
+
+    /// <summary>
+    /// all terms keys in Blasphemous' localization service.
+    /// </summary>
+    private List<string> allPossibleKeys = new List<string>();
 
     /// <summary>
     /// the class containing config properties, loaded from `.cfg` file.
@@ -34,11 +44,16 @@ public class LocalizationPatcher : BlasMod
         // load config
         config = ConfigHandler.Load<LanguageConfig>();
 
+        // read all the term keys from base game
+        foreach (LanguageSource source in LocalizationManager.Sources)
+        {
+            allPossibleKeys.AddRange(source.GetTermsList());
+        }
+
+        // first, remove all loaded languages in the game
         List<string> allLanguageNames = new();
         List<string> allLanguageCodes = new();
         GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
-
-        // first, remove all loaded languages in the game
         Log($"Removing all languages in vanilla game");
         foreach (string langName in allLanguageNames)
         {
@@ -59,19 +74,20 @@ public class LocalizationPatcher : BlasMod
             }
         }
 
-        Log("Start loading all mod language files into the game");
+
         // load in all the language `.txt` patch files and construct their corresponding language objects.
+        Log("Start loading all mod language files into the game");
         string[] allLanguageFilePaths = GetAllLanguageFilePaths();
         int currentLanguageIndex = 0;
         foreach (string filePath in allLanguageFilePaths)
         {
             string fileName = Path.GetFileName(filePath);
-            languages.Add(new Language(filePath));
-            if (config.disabledLanguages.Contains(languages[currentLanguageIndex].NAME))
+            languagePatches.Add(new LanguagePatch(filePath));
+            if (config.disabledLanguages.Contains(languagePatches[currentLanguageIndex].NAME))
             {
-                Log($"Since language {languages[currentLanguageIndex].NAME} is disabled, " +
-                    $"file `{languages[currentLanguageIndex].FILE_NAME}` is not loaded");
-                languages.RemoveAt(currentLanguageIndex);
+                Log($"Since language {languagePatches[currentLanguageIndex].NAME} is disabled, " +
+                    $"file `{languagePatches[currentLanguageIndex].FILE_NAME}` is not loaded");
+                languagePatches.RemoveAt(currentLanguageIndex);
                 continue;
             }
             Log($"Loaded language file {fileName}");
@@ -82,7 +98,7 @@ public class LocalizationPatcher : BlasMod
         // check if all current patches are assigned a priority in the config file
         bool priorityAssigned = true;
         List<string> allPatchNames = ["base"];
-        foreach (Language lang in languages)
+        foreach (LanguagePatch lang in languagePatches)
         {
             if (!allPatchNames.Contains(lang.PATCH_NAME))
             {
@@ -97,26 +113,39 @@ public class LocalizationPatcher : BlasMod
                 break;
             }
         }
-        // if priority is not pre-assigned, assign priority
+        // if priority is not pre-assigned, or the first patch is not `base`, assign priority
         // "base" gets smallest priority
         // other patches are assigned priority by the order in alphabetical order.
         // write the generated priority list into the config file
-        if (!priorityAssigned)
+        if (!priorityAssigned || !string.Equals(config.patchingOrder[0].Trim(), "base"))
         {
             LogWarning("Current patching order in config is not valid, resetting to default order.");
             config.patchingOrder = allPatchNames;
         }
         ConfigHandler.Save<LanguageConfig>(config);
 
-        // load each langauge patch into the game, based on priority in config.
-        // load the patches based on patching priority
+        // Load each langauge patch into CompiledLanguage object of corresponding language,
+        // based on priority in config.
         foreach (string patchName in config.patchingOrder)
         {
-            foreach (Language language in languages.FindAll(lang => lang.PATCH_NAME == patchName))
+            foreach (LanguagePatch language in languagePatches.FindAll(lang => lang.PATCH_NAME == patchName))
             {
                 LoadText(language);
-                ReplaceText(language);
+                CompileText(language);
             }
+        }
+
+        // Load each CompiledLanguage object into the game.
+        foreach(CompiledLanguage language in compiledLanguages)
+        {
+            // if `base` patch is not applied for this language, do not load.
+            if (!language.PATCHES_APPLIED.Contains("base")) 
+            {
+                LogWarning($"{language.NAME} does not have a `base` patch loaded, " +
+                    $"skipping {language.NAME} entirely.");
+                continue;
+            }
+            RegisterTextToGame(language);
         }
 
         // display all current languages into log
@@ -128,24 +157,20 @@ public class LocalizationPatcher : BlasMod
             Log($"\nlanguage #{i + 1} : \n" +
                 $"language name: {allLanguageNames[i]}\n" +
                 $"language code: {allLanguageCodes[i]}");
-            int currentPatchCount = 1;
-            for (int j = 0; j < config.patchingOrder.Count; j++)
+            int currentPatchCount = 0;
+            foreach (string patchName in compiledLanguages.Find(l => l.NAME == allLanguageNames[i]).PATCHES_APPLIED)
             {
-                Language currentPatch = languages.Find(lang => lang.NAME == allLanguageNames[i] && lang.PATCH_NAME == config.patchingOrder[j]);
-                if (currentPatch != null)
-                {
-                    Log($"#{currentPatchCount} patch for {allLanguageNames[i]}: {currentPatch.PATCH_NAME}");
-                    currentPatchCount++;
-                }
+                currentPatchCount++;
+                Log($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
             }
         }
     }
 
     /// <summary>
-    /// load all terms from the `.txt` file into a `Language` class object
+    /// load all terms from the `.txt` file into a `LanguagePatch` class object
     /// </summary>
     /// <param name="lang">language object being operated</param>
-    private void LoadText(Language lang)
+    private void LoadText(LanguagePatch lang)
     {
         if (!FileHandler.LoadDataAsText(lang.FILE_NAME, out string text))
         {
@@ -154,13 +179,18 @@ public class LocalizationPatcher : BlasMod
         }
 
         int nearEmptyTermCount = 0;
-        foreach (string line in text.Split('\n'))
+        int valueEmptyTermCount = 0;
+        string[] textSplit = text.Split('\n');
+        foreach (string line in textSplit)
         {
-            if (line.Length < 5)
+            // a line with less than 5 characters (usually empty line) is definitely not a valid term
+            // skip it to avoid error.
+            if (line.Length < 5) 
             {
                 nearEmptyTermCount++;
                 continue;
             }
+
             // split each line into operation key, operationType, and value.
             string operationSeparator = "->";
             string valueSeparator = ":";
@@ -171,36 +201,91 @@ public class LocalizationPatcher : BlasMod
             string operationType = line.Substring(operationBeginIndex + operationSeparator.Length, valueBeginIndex - (operationBeginIndex + operationSeparator.Length)).Trim();
             string value = line.Substring(valueBeginIndex + valueSeparator.Length).Trim().Replace('@', '\n');
 
-            // load  key, operationType, and value into dictionary objects of the language object
+            // load  key, operationType, and value into corresponding lists
             if (value != string.Empty)
             {
                 lang.TERM_KEYS.Add(key);
                 lang.TERM_CONTENTS.Add(value);
                 lang.TERM_OPERATIONS.Add(operationType);
             }
+            else
+            {
+                LogWarning($"Skipping term {key} with empty term content.\n" +
+                    $"replacing a string with empty content is not recommended.");
+                valueEmptyTermCount++;
+            }
         }
-        Log($"Successfully loaded {lang.TERM_KEYS.Count} terms of {lang.NAME} for patch `{lang.PATCH_NAME}`");
-        if (nearEmptyTermCount > 0)
+        Log($"Successfully loaded {lang.TERM_KEYS.Count} of {textSplit.Length} terms of {lang.NAME} for patch `{lang.PATCH_NAME}`");
+        if (nearEmptyTermCount + valueEmptyTermCount > 0)
         {
-            LogWarning($"Skipped {nearEmptyTermCount} near-empty terms\n");
+            LogWarning($"Skipped {nearEmptyTermCount} near-empty terms " +
+                $"and {valueEmptyTermCount} terms with empty values\n");
         }
         else
         {
-            Log($"All loadings are successful for this patch.\n");
+            Log($"Loading process encountered no error.\n");
         }
     }
 
     /// <summary>
-    /// load all terms from the `Language` class object into the game
+    /// load and compile all terms from the `LanguagePatch` class object 
+    /// into their corresponding CompiledLanguage object
     /// </summary>
     /// <param name="lang">language object being operated</param>
-    private void ReplaceText(Language lang)
+    private void CompileText(LanguagePatch lang)
     {
         // counting successful and failed operations
         int successfulCount = 0;
         int operationErrorCount = 0;
+
+        // find the corresponding CompiledLanguage object
+        // if not found, create one
+        if (compiledLanguages.Find(l => l.NAME == lang.NAME) == null)
+        {
+            compiledLanguages.Add(new CompiledLanguage(lang.NAME, lang.CODE));
+        }
+        int languageIndex = compiledLanguages.FindIndex(l => l.NAME == lang.NAME);
+
+        // record this patch to the CompiledLanguage object
+        compiledLanguages[languageIndex].PATCHES_APPLIED.Add(lang.PATCH_NAME);
+
+        // compile each term patch to the CompiledLanguage object
+        for (int i = 0; i < lang.TERM_KEYS.Count; i++)
+        {
+            string errMsg = string.Empty;
+            compiledLanguages[languageIndex].UpdateTerm(lang.TERM_KEYS[i], lang.TERM_CONTENTS[i], lang.TERM_OPERATIONS[i], ref errMsg);
+            if (!string.Equals(errMsg, string.Empty)) 
+            {
+                LogWarning(errMsg);
+                operationErrorCount++;
+            }
+            else
+            {
+                successfulCount++;
+            }
+        }
+
+        Log($"Successfully patched {successfulCount} of {lang.TERM_KEYS.Count} terms for {lang.NAME} from patch `{lang.PATCH_NAME}` into the game");
+        if (operationErrorCount > 0)
+        {
+            LogWarning($"Skipped {operationErrorCount} terms with invalid operation type.\n");
+        }
+        else
+        {
+            Log($"Compiling process encountered no error.\n");
+        }
+    }
+
+    /// <summary>
+    /// load all the terms of `lang` into Blasphemous
+    /// </summary>
+    /// <param name="lang"> the CompiledLanguage object being loaded </param>
+    private void RegisterTextToGame(CompiledLanguage lang)
+    {
+        int successfulCount = 0;
         int keyErrorCount = 0;
         // documenting whether a term isn't patched till the end due to its key being nonexistent.
+        // true => this term has keyError
         List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(true, lang.TERM_KEYS.Count));
 
         foreach (LanguageSource source in LocalizationManager.Sources)
@@ -217,55 +302,35 @@ public class LocalizationPatcher : BlasMod
                 if (allAvailableTerms.Contains(lang.TERM_KEYS[i]))
                 {
                     keyErrorFlags[i] = false;
-
-                    string termOperation = lang.TERM_OPERATIONS[i];
                     string termKey = lang.TERM_KEYS[i];
-                    string termText = lang.TERM_CONTENTS[i];
-                    if (string.Equals(termOperation, "Replace"))
-                    {
-                        source.GetTermData(termKey).Languages[languageIndex] = termText;
-                        successfulCount++;
-                    }
-                    else if (string.Equals(termOperation, "AppendAtBeginning"))
-                    {
-                        string originalTermText = source.GetTermData(termKey).Languages[languageIndex];
-                        source.GetTermData(termKey).Languages[languageIndex] = termText + originalTermText;
-                        successfulCount++;
-                    }
-                    else if (string.Equals(termOperation, "AppendAtEnd"))
-                    {
-                        string originalTermText = source.GetTermData(termKey).Languages[languageIndex];
-                        source.GetTermData(termKey).Languages[languageIndex] = originalTermText + termText;
-                        successfulCount++;
-                    }
-                    else
-                    {
-                        LogWarning($"term {termKey} calls for unsupported operation method {termOperation}, " +
-                            $"skipping this term.");
-                        operationErrorCount++;
-                    }
-                    
+                    string termText = lang.TERM_PREFIXES[i] + lang.TERM_CONTENTS[i] + lang.TERM_SUFFIXES[i];
+                    source.GetTermData(termKey).Languages[languageIndex] = termText;
+
                 }
             }
         }
-        for ( int i = 0; i < keyErrorFlags.Count; i++ )
+        for (int i = 0; i < keyErrorFlags.Count; i++)
         {
             if (keyErrorFlags[i] == true)
             {
-                LogWarning($"term key {lang.TERM_KEYS[i]} not found, skipping this term.");
+                LogWarning($"term key {lang.TERM_KEYS[i]} not found in Blasphemous localization directory, " +
+                    $"skipping this term.");
                 keyErrorCount++;
+            }
+            else
+            {
+                successfulCount++;
             }
         }
 
-        Log($"Successfully patched {successfulCount} terms of {lang.NAME} from patch `{lang.PATCH_NAME}` into the game");
-        if (keyErrorCount + operationErrorCount > 0)
+        Log($"Successfully registered {successfulCount} of {lang.TERM_KEYS.Count} terms of {lang.NAME} into the game");
+        if (keyErrorCount > 0)
         {
-            LogWarning($"Skipped {keyErrorCount} terms with invalid keys " +
-                $"and {operationErrorCount} terms with invalid operation type.\n");
+            LogWarning($"Skipped {keyErrorCount} terms with invalid keys.\n");
         }
         else
         {
-            Log($"All operations are successful for this patch.\n");
+            Log($"Register process encountered no error.\n");
         }
     }
 
@@ -307,16 +372,20 @@ public class LocalizationPatcher : BlasMod
 }
 
 /// <summary>
-/// contains the basic information of a language
+/// contains the basic information of a localization patch
 /// </summary>
-public class Language
+public class LanguagePatch
 {
     /// <summary>
-    /// constructor of `Language` class
+    /// constructor of `LanguagePatch` class
     /// </summary>
     /// <param name="fullFilePath"> the full file path of the language's `.txt` file</param>
-    public Language(string fullFilePath)
+    public LanguagePatch(string fullFilePath)
     {
+        if (fullFilePath == string.Empty || !File.Exists(fullFilePath))
+        {
+            return;
+        }
         this.FULL_FILE_PATH = fullFilePath;
         this.FILE_NAME = Path.GetFileName(fullFilePath);
 
@@ -366,4 +435,102 @@ public class Language
     /// All the operations to be executed to the language terms.
     /// </summary>
     public List<string> TERM_OPERATIONS = new List<string>();
+}
+
+/// <summary>
+/// Contains the information of each language (one object per language, not per patch). 
+/// </summary>
+public class CompiledLanguage
+{
+    /// <summary>
+    /// constructor of the CompiledLanguage class.
+    /// </summary>
+    /// <param name="name"> name of the language </param>
+    /// <param name="code"> language code of the language </param>
+    public CompiledLanguage(string name, string code)
+    {
+        this.NAME = name;
+        this.CODE = code;
+    }
+
+    /// <summary>
+    /// update a term in the CompiledLanguage object
+    /// </summary>
+    /// <param name="key"> key of the term being updated </param>
+    /// <param name="text"> text of the term </param>
+    /// <param name="operation"> operation of the term</param>
+    /// <param name="errorMessage"> error message output, it's empty if no error happens </param>>
+    public void UpdateTerm(string key, string text, string operation, ref string errorMessage)
+    {
+        errorMessage = string.Empty;
+
+        // if the key isn't registered, register the key and all 3 types of contents
+        if (!this.TERM_KEYS.Contains(key))
+        {
+            this.TERM_KEYS.Add(key);
+            this.TERM_PREFIXES.Add(string.Empty);
+            this.TERM_CONTENTS.Add(string.Empty);
+            this.TERM_SUFFIXES.Add(string.Empty);
+        }
+        int termIndex = this.TERM_KEYS.IndexOf(key);
+
+        if (string.Equals(operation, "Replace"))
+        {
+            this.TERM_CONTENTS[termIndex] = text;
+        }
+        else if (string.Equals(operation, "ReplaceAll"))
+        {
+            this.TERM_CONTENTS[termIndex] = text;
+            this.TERM_PREFIXES[termIndex] = string.Empty;
+            this.TERM_SUFFIXES[termIndex] = string.Empty;
+        }
+        else if (string.Equals(operation, "AppendAtBeginning"))
+        {
+            this.TERM_PREFIXES[termIndex] = text + this.TERM_PREFIXES[termIndex];
+        }
+        else if (string.Equals(operation, "AppendAtEnd"))
+        {
+            this.TERM_SUFFIXES[termIndex] = this.TERM_SUFFIXES[termIndex] + text;
+        }
+        else
+        {
+            errorMessage = $"term {key} calls for unsupported operation method {operation}, " +
+                            $"skipping this term.";
+        }
+    }
+
+    /// <summary>
+    /// the name of the language
+    /// </summary>
+    public string NAME;
+
+    /// <summary>
+    /// the internal language code of the language
+    /// </summary>
+    public string CODE;
+
+    /// <summary>
+    /// All the term keys of the language terms.
+    /// </summary>
+    public List<string> TERM_KEYS = new();
+
+    /// <summary>
+    /// All the prefixes of term contents of the language terms.
+    /// </summary>
+    public List<string> TERM_PREFIXES = new();
+
+    /// <summary>
+    /// All the central term contents of the language terms.
+    /// </summary>
+    public List<string> TERM_CONTENTS = new();
+
+    /// <summary>
+    /// All the suffixes of term contents of the language terms.
+    /// </summary>
+    public List<string> TERM_SUFFIXES = new();
+
+    /// <summary>
+    /// documenting all patches applied to this language
+    /// </summary>
+    public List<string> PATCHES_APPLIED = new();
 }
