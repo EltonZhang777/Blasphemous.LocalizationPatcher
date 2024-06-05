@@ -1,0 +1,7 @@
+UI_Inventory/GRID_LABEL_PRAYERS -> AppendAtEnd : aaa!!!!!!!
+
+InvalidKey -> Replace : test1
+
+Prayer/PR03_DESCRIPTION -> InvalidOperation : test2
+
+Prayer/PR07_DESCRIPTION -> Replace :

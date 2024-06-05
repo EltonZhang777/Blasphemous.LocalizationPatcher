@@ -4,18 +4,18 @@
     <TargetFramework>net35</TargetFramework>
     <LangVersion>latest</LangVersion>
 
-    <Title>Andalusian</Title>
-    <Product>Andalusian</Product>
-    <Authors>Damocles</Authors>
-    <Company>Damocles</Company>
+    <Title>LocalizationPatcher</Title>
+    <Product>LocalizationPatcher</Product>
+    <Authors>Damocles and NewbieElton</Authors>
+    <Company>Damocles and NewbieElton</Company>
     <Description>Adds the Andalusian language to Blasphemous</Description>
     <Version>1.0.1</Version>
 
-    <TargetName>Andalusian</TargetName>
+    <TargetName>LocalizationPatcher</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <DocumentationFile>bin\Release\$(TargetName).xml</DocumentationFile>
-    <RepositoryUrl>https://github.com/BrandenEK/Blasphemous.Andalusian</RepositoryUrl>
+    <RepositoryUrl>https://github.com/EltonZhang777/Blasphemous.LocalizationPatcher</RepositoryUrl>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
