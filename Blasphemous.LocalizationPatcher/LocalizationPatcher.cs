@@ -50,7 +50,82 @@ public class LocalizationPatcher : BlasMod
             allPossibleKeys.AddRange(source.GetTermsList());
         }
 
-        // first, remove all loaded languages in the game
+        // load in all the language `.txt` patch files
+        //   and construct their corresponding LanguagePatch objects.
+        // skip all disabled languages and disabled patches
+        Log("Start loading all mod language files into the game");
+        string[] allLanguageFilePaths = GetAllLanguageFilePaths();
+        int currentLanguageIndex = 0;
+        foreach (string filePath in allLanguageFilePaths)
+        {
+            string fileName = Path.GetFileName(filePath);
+            languagePatches.Add(new LanguagePatch(filePath));
+            if (config.disabledLanguages.Contains(languagePatches[currentLanguageIndex].NAME))
+            {
+                Log($"Since language {languagePatches[currentLanguageIndex].NAME} is disabled, " +
+                    $"file `{languagePatches[currentLanguageIndex].FILE_NAME}` is not loaded");
+                languagePatches.RemoveAt(currentLanguageIndex);
+                continue;
+            }
+            else if (config.disabledPatches.Contains(languagePatches[currentLanguageIndex].PATCH_NAME))
+            {
+                Log($"Since patch {languagePatches[currentLanguageIndex].PATCH_NAME} is disabled, " +
+                    $"file `{languagePatches[currentLanguageIndex].FILE_NAME}` is not loaded");
+                languagePatches.RemoveAt(currentLanguageIndex);
+                continue;
+            }
+            Log($"Loaded language file {fileName}");
+            currentLanguageIndex++;
+        }
+
+        // determine the patching order by reading config.
+        // check if all current patches are assigned a priority in the config file
+        bool patchingPriorityAssigned = true;
+        List<string> allPatchNames = ["base"];
+        foreach (LanguagePatch lang in languagePatches)
+        {
+            if (!allPatchNames.Contains(lang.PATCH_NAME))
+            {
+                allPatchNames.Add(lang.PATCH_NAME);
+            }
+        }
+        foreach (string patchName in allPatchNames)
+        {
+            if (!config.patchingOrder.Contains(patchName))
+            {
+                patchingPriorityAssigned = false;
+                config.patchingOrder.Add(patchName);
+            }
+        }
+        // if priority is not pre-assigned, or the first patch is not `base`, assign priority
+        // "base" gets smallest priority
+        // patches not assigned priority originally are given largest priority value
+        // multiple unassigned patches are assigned by `.txt` read-in order.
+        if (!string.Equals(config.patchingOrder[0].Trim(), "base"))
+        {
+            LogWarning($"Must patch `base` patches first. Resetting patching order to default.");
+            config.patchingOrder = allPatchNames;
+        }
+        else if (!patchingPriorityAssigned)
+        {
+            LogWarning("Missing some patches in the current patching order, " +
+                "unassigned patches are patched at the end.");
+        }
+        // save current config into the config file
+        ConfigHandler.Save<LanguageConfig>(config);
+
+        // Load each langauge patch into CompiledLanguage object of corresponding language,
+        //   based on priority in config.
+        foreach (string patchName in config.patchingOrder)
+        {
+            foreach (LanguagePatch language in languagePatches.FindAll(lang => lang.PATCH_NAME == patchName))
+            {
+                LoadText(language);
+                CompileText(language);
+            }
+        }
+
+        // remove all vanilla-loaded languages in the game
         List<string> allLanguageNames = new();
         List<string> allLanguageCodes = new();
         GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
@@ -74,78 +149,51 @@ public class LocalizationPatcher : BlasMod
             }
         }
 
-
-        // load in all the language `.txt` patch files and construct their corresponding language objects.
-        Log("Start loading all mod language files into the game");
-        string[] allLanguageFilePaths = GetAllLanguageFilePaths();
-        int currentLanguageIndex = 0;
-        foreach (string filePath in allLanguageFilePaths)
+        // determine the language order by reading config
+        // check if every current language is assigned a priority
+        // assign unassigned languages with least priority.
+        bool languagePriorityAssigned = true;
+        allLanguageNames = [];
+        foreach (CompiledLanguage lang in compiledLanguages)
         {
-            string fileName = Path.GetFileName(filePath);
-            languagePatches.Add(new LanguagePatch(filePath));
-            if (config.disabledLanguages.Contains(languagePatches[currentLanguageIndex].NAME))
+            if (!allLanguageNames.Contains(lang.NAME))
             {
-                Log($"Since language {languagePatches[currentLanguageIndex].NAME} is disabled, " +
-                    $"file `{languagePatches[currentLanguageIndex].FILE_NAME}` is not loaded");
-                languagePatches.RemoveAt(currentLanguageIndex);
-                continue;
-            }
-            Log($"Loaded language file {fileName}");
-            currentLanguageIndex++;
-        }
-
-        // determine the patching order by reading config
-        // check if all current patches are assigned a priority in the config file
-        bool priorityAssigned = true;
-        List<string> allPatchNames = ["base"];
-        foreach (LanguagePatch lang in languagePatches)
-        {
-            if (!allPatchNames.Contains(lang.PATCH_NAME))
-            {
-                allPatchNames.Add(lang.PATCH_NAME);
+                allLanguageNames.Add(lang.NAME);
             }
         }
-        foreach (string patchName in allPatchNames)
+        foreach (string langName in allLanguageNames)
         {
-            if (!config.patchingOrder.Contains(patchName))
+            if (!config.languageOrder.Contains(langName))
             {
-                priorityAssigned = false;
-                break;
+                languagePriorityAssigned = false;
+                config.languageOrder.Add(langName);
             }
         }
-        // if priority is not pre-assigned, or the first patch is not `base`, assign priority
-        // "base" gets smallest priority
-        // other patches are assigned priority by the order in alphabetical order.
-        // write the generated priority list into the config file
-        if (!priorityAssigned || !string.Equals(config.patchingOrder[0].Trim(), "base"))
+        // if priority is not pre-assigned, assign priority
+        // languages not assigned priority originally are given largest priority value
+        // multiple unassigned languages are assigned by `.txt` read-in order.
+        if (!languagePriorityAssigned)
         {
-            LogWarning("Current patching order in config is not valid, resetting to default order.");
-            config.patchingOrder = allPatchNames;
+            LogWarning("Missing some languages in the current language order, " +
+                "unassigned languages are loaded at the end.");
         }
+        // save current config into the config file
         ConfigHandler.Save<LanguageConfig>(config);
 
-        // Load each langauge patch into CompiledLanguage object of corresponding language,
-        // based on priority in config.
-        foreach (string patchName in config.patchingOrder)
-        {
-            foreach (LanguagePatch language in languagePatches.FindAll(lang => lang.PATCH_NAME == patchName))
-            {
-                LoadText(language);
-                CompileText(language);
-            }
-        }
-
         // Load each CompiledLanguage object into the game.
-        foreach(CompiledLanguage language in compiledLanguages)
+        foreach (string langName in config.languageOrder)
         {
-            // if `base` patch is not applied for this language, do not load.
-            if (!language.PATCHES_APPLIED.Contains("base")) 
+            foreach (CompiledLanguage language in compiledLanguages.FindAll(l => l.NAME == langName))
             {
-                LogWarning($"{language.NAME} does not have a `base` patch loaded, " +
-                    $"skipping {language.NAME} entirely.");
-                continue;
+                // if `base` patch is not applied for this language, do not load.
+                if (!language.PATCHES_APPLIED.Contains("base"))
+                {
+                    LogWarning($"{language.NAME} does not have a `base` patch loaded, " +
+                        $"skipping {language.NAME} entirely.");
+                    continue;
+                }
+                RegisterTextToGame(language);
             }
-            RegisterTextToGame(language);
         }
 
         // display all current languages into log
@@ -436,6 +484,7 @@ public class LanguagePatch
     /// </summary>
     public List<string> TERM_OPERATIONS = new List<string>();
 }
+
 
 /// <summary>
 /// Contains the information of each language (one object per language, not per patch). 
