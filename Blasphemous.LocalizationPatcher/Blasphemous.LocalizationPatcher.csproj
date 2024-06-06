@@ -8,8 +8,8 @@
     <Product>LocalizationPatcher</Product>
     <Authors>Damocles and NewbieElton</Authors>
     <Company>Damocles and NewbieElton</Company>
-    <Description>Adds the Andalusian language to Blasphemous</Description>
-    <Version>1.0.1</Version>
+    <Description>Allows customizing localization texts of Blasphemous</Description>
+    <Version>1.0.0</Version>
 
     <TargetName>LocalizationPatcher</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
