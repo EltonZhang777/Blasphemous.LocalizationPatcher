@@ -1,16 +1,9 @@
-﻿using BepInEx.Logging;
-using Blasphemous.ModdingAPI;
+﻿using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
-using Framework.FrameworkCore;
 using I2.Loc;
-using JetBrains.Annotations;
-using Mono.Cecil.Cil;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
-using UnityEngine;
-using UnityEngine.Windows.Speech;
 
 namespace Blasphemous.LocalizationPatcher;
 
