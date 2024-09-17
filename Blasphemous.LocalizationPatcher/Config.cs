@@ -1,37 +1,31 @@
-﻿using System.Collections.Generic;
+﻿using Blasphemous.ModdingAPI;
+using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher;
 
 /// <summary>
-/// config class for LocalizationPatcher mod
+/// Master config class for LocalizationPatcher mod
 /// </summary>
-public class LanguageConfig
+public class Config
 {
     /// <summary>
-    /// list of all loaded languages' order in the game's settings.
+    /// List of all loaded languages' order in the game's settings.
     /// </summary>
-    public List<string> languageOrder;
+    public List<string> languageOrder = new();
 
     /// <summary>
-    /// a list of all disabled languages' language names.
+    /// List of all disabled languages' language names.
     /// </summary>
-    public List<string> disabledLanguages;
+    public List<string> disabledLanguages = new();
 
     /// <summary>
-    /// a list of all loaded patches' patching order, from first to last.
+    /// List of patching order of all mods, from first to last.
     /// </summary>
-    public List<string> patchingOrder;
-
-    public List<string> disabledPatches;
+    public List<string> patchingModOrder = new();
 
     /// <summary>
-    /// constructor of `LanguageConfig` object
+    /// List of patches disabled in the config file
     /// </summary>
-    public LanguageConfig()
-    {
-        languageOrder = new List<string>();
-        disabledLanguages = new List<string>();
-        patchingOrder = new List<string>();
-        disabledPatches = new List<string>(); 
-    }
+    public List<string> disabledPatches = new();
+
 }
