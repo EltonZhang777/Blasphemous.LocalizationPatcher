@@ -1,7 +1,4 @@
-﻿using Gameplay.GameControllers.Entities;
-using Gameplay.GameControllers.Penitent;
-
-namespace Blasphemous.LocalizationPatcher.Events;
+﻿namespace Blasphemous.LocalizationPatcher.Events;
 
 internal class EventHandler
 {

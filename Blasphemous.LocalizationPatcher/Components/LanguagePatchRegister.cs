@@ -26,7 +26,8 @@ public static class LanguagePatchRegister
             return;
 
         // prevents repeated registering
-        if (_patches.Any(x => x.patchName == patch.patchName))
+        string name = patch.patchName;
+        if (_patches.Any(x => x.patchName == name))
             return;
 
         patch.parentModId = provider.RegisteringMod.Id;

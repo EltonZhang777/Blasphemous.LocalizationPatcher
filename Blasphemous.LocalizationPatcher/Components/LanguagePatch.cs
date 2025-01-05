@@ -1,10 +1,6 @@
-﻿using Blasphemous.ModdingAPI.Files;
-using Blasphemous.ModdingAPI;
-using System.Collections.Generic;
-using System.Data.SqlTypes;
-using System.IO;
-using System.Linq.Expressions;
+﻿using Blasphemous.ModdingAPI;
 using Framework.Managers;
+using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
@@ -39,7 +35,7 @@ public class LanguagePatch
     /// A patch with smaller order number get patched first  
     /// among other patches registered by the same mod.
     /// </summary>
-    public int patchOrder = int.MinValue;
+    public int patchOrder = 0;
 
     /// <summary>
     /// Documenting when this patch should be applied
@@ -96,7 +92,7 @@ public class LanguagePatch
         string langName,
         string langCode,
         string fullText,
-        int order = int.MinValue,
+        int order = 0,
         PatchType type = PatchType.OnInitialize,
         string flag = null)
     {
@@ -113,7 +109,7 @@ public class LanguagePatch
         }
         else if (type == PatchType.OnFlag && flag != null && flag != string.Empty)
         {
-            Main.LocalizationPatcher.EventHandler.OnFlagChange += OnFlagSetToTrue;
+            Main.LocalizationPatcher.EventHandler.OnFlagChange += OnFlagChange;
         }
 
         LoadText(fullText);
@@ -125,10 +121,10 @@ public class LanguagePatch
     /// <param name="rawText">Full text passed in by `FileHandler.LoadDataAsText`</param>
     public void LoadText(string rawText)
     {
-
         int nearEmptyTermCount = 0;
         int valueEmptyTermCount = 0;
         string[] rawTextSplit = rawText.Split('\n');
+        
         foreach (string line in rawTextSplit)
         {
             // a line with less than 5 characters (usually empty line) is definitely not a valid term
@@ -149,7 +145,7 @@ public class LanguagePatch
             string operationType = line.Substring(operationBeginIndex + operationSeparator.Length, valueBeginIndex - (operationBeginIndex + operationSeparator.Length)).Trim();
             string value = line.Substring(valueBeginIndex + valueSeparator.Length).Trim().Replace('@', '\n');
 
-            // load  key, operationType, and value into corresponding lists
+            // load key, operationType, and value into corresponding lists
             if (value != string.Empty)
             {
                 termKeys.Add(key);
@@ -226,10 +222,12 @@ public class LanguagePatch
     /// <summary>
     /// Apply the patch to game when the corresponding flag is set to true
     /// </summary>
-    protected void OnFlagSetToTrue(string flagId)
+    protected void OnFlagChange(string flagId)
     {
-        if (flagId != patchFlag)  return;
-        if (Core.Events.GetFlag(flagId) == false) return;
+        if (flagId != patchFlag) 
+            return;
+        if (Core.Events.GetFlag(flagId) == false) 
+            return;
         CompileText();
     }
 }

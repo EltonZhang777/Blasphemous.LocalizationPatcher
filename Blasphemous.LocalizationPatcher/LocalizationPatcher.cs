@@ -1,12 +1,12 @@
 ﻿using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
 using Blasphemous.ModdingAPI;
-using Blasphemous.ModdingAPI.Files;
+using Framework.Managers;
 using I2.Loc;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using UnityEngine;
 
 namespace Blasphemous.LocalizationPatcher;
 
@@ -23,60 +23,120 @@ internal class LocalizationPatcher : BlasMod
     internal List<string> allPossibleKeys = new();
 
     /// <summary>
-    /// the class containing config properties, loaded from `.cfg` file.
+    /// Loaded from `.cfg` file.
     /// </summary>
-    public Config config { get; private set; }
+    internal Config config { get; private set; }
 
     internal EventHandler EventHandler { get; } = new();
 
+    private string _keyStorageFileName = "KeyDisplay_kd_base.txt";
+
+
+    protected override void OnInitialize()
+    {
+        // load config
+        config = ConfigHandler.Load<Config>();
+
+        // read all valid term keys that are used
+        /*
+        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+        {
+            allPossibleKeys.AddRange(source.GetTermsList());
+        }
+        allPossibleKeys = allPossibleKeys.Distinct().ToList();
+        */
+        FileHandler.LoadDataAsText(_keyStorageFileName, out string keysString);
+        allPossibleKeys = new LanguagePatch("temp", "temp", keysString).termKeys.Distinct().ToList();
+    }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
     {
 #if DEBUG
-        Main.LocalizationPatcher.FileHandler.LoadDataAsText("KeyDisplay_kd_base.txt", out string patch1Text);
-        provider.RegisterLanguagePatch(new LanguagePatch(
-            "English",
-            "en",
-            patch1Text));
+        // load the debug test patch
+        string testPatchName = "KeyDisplay_kd_base.txt";
+
+        if (File.Exists(Path.GetFullPath(FileHandler.ModdingFolder + "data/" + base.Name + @"/" + testPatchName)))
+        {
+            ModLog.Info($"Loading debug test patch `{Path.GetFileNameWithoutExtension(testPatchName)}`");
+
+            Main.LocalizationPatcher.FileHandler.LoadDataAsText(testPatchName, out string debugPatchText);
+            provider.RegisterLanguagePatch(new LanguagePatch(
+                "KeyDisplay",
+                "kd",
+                debugPatchText));
+        }
 #endif
     }
 
 
     protected override void OnAllInitialized()
     {
-        // load config
-        config = ConfigHandler.Load<Config>();
+        ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches to the game");
 
-        // read all the term keys from base game
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        // store the language selected by the player in settings, so that it can be restored after patching completes
+        string playerCurrentLanguage = I2.Loc.LocalizationManager.CurrentLanguage;
+        string playerCurrentLanguageCode = I2.Loc.LocalizationManager.CurrentLanguageCode;
+        ModLog.Info($"Stored current language selection: {playerCurrentLanguage}");
+
+
+        // Remove disabled languages in the game first
+        ModLog.Info($"Removing all disabled languages of vanilla game:");
+        int removedLanguageCount = 0;
+        foreach (string langName in config.disabledLanguages)
         {
-            allPossibleKeys.AddRange(source.GetTermsList());
+            try
+            {
+                RemoveLanguageFromGame(langName);
+                ModLog.Info($"Successfully removed {langName} from game.");
+                removedLanguageCount++;
+            }
+            catch
+            {
+                ModLog.Error($"Failed disabling language: language named \"{langName}\" not found!");
+            }
         }
+        ModLog.Info($"Successfully removed {removedLanguageCount} languages from game.");
+
+        // Create CompiledLanguage objects of remaining languages
+        List<string> allLanguageNames = new();
+        List<string> allLanguageCodes = new();
+        GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
+        foreach (string langName in allLanguageNames)
+        {
+            try
+            {
+                CompiledLanguage compiledLang = new(langName, allLanguageCodes[allLanguageNames.IndexOf(langName)]);
+                compiledLang.ReadAllTermsFromGame();
+                compiledLanguages.Add(compiledLang);
+            }
+            catch (System.Exception error)
+            {
+                ModLog.Error($"Encountered error: `{error}` when initializing {langName} CompiledLanguage object!");
+            }
+        }
+        // Remove all vanilla langauges
+        foreach (string langName in allLanguageNames)
+        {
+            RemoveLanguageFromGame(langName);
+        }
+
+
 
         // load in all registered language `.txt` patch files
         //   and construct their corresponding LanguagePatch objects.
         // skip all disabled languages and disabled patches
-        ModLog.Info("Start loading all mod language patches into the game");
+        ModLog.Info("Start writing all mod language patches into the game");
 
         // Determine the patching order by reading config.
         // First queue all mods according to the mod order, 
         //   and for each mod, patch according to the order assigned 
-
         // Check if all current patches are assigned a priority in the config file
+        // If priority is not pre-assigned, assign priority
+        // Patches not assigned priority are given assigned to the last
+        // Multiple unassigned patches are assigned by register order
+        //   (now practically randomly ordered).
         bool patchingPriorityAssigned = true;
-        // Get a list of mods that patched localization
-        List<string> allPatchingModIds = new();
-        foreach (LanguagePatch lang in LanguagePatchRegister.Patches)
-        {
-            if (!allPatchingModIds.Contains(lang.parentModId))
-            {
-                allPatchingModIds.Add(lang.parentModId);
-            }
-        }
-        // if priority is not pre-assigned, assign priority
-        // patches not assigned priority are given assigned to the last
-        // multiple unassigned patches are assigned by register order
-        // (now practically randomly ordered).
+        List<string> allPatchingModIds = LanguagePatchRegister.Patches.Select(x => x.parentModId).Distinct().ToList();
         foreach (string ModId in allPatchingModIds)
         {
             if (!config.patchingModOrder.Contains(ModId))
@@ -99,41 +159,9 @@ internal class LocalizationPatcher : BlasMod
         foreach (LanguagePatch patch in LanguagePatchRegister._patches)
         {
             patch.CompileText();
+            ModLog.Info($"patch name: {patch.patchName}");
         }
 
-        // Remove disabled languages in the game first
-        ModLog.Info($"Removing all disabled languages of vanilla game");
-        foreach (string langName in config.disabledLanguages)
-        {
-            try
-            {
-                RemoveLanguageFromGame(langName);
-                ModLog.Info($"Successfully removed {langName} from game.");
-            }
-            catch
-            {
-                ModLog.Error($"failed disabling language: language named \"{langName}\" not found!");
-            }
-        }
-        // Create CompiledLanguage objects of remaining languages before removing them.
-        List<string> allLanguageNames = new();
-        List<string> allLanguageCodes = new();
-        GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
-        foreach (string langName in allLanguageNames)
-        {
-            try
-            {
-                CompiledLanguage compiledLang = new(langName, allLanguageCodes[allLanguageNames.IndexOf(langName)]);
-                compiledLang.LoadAllTermsFromGame();
-                compiledLanguages.Add(compiledLang);
-                RemoveLanguageFromGame(langName);
-            }
-            catch 
-            {
-
-                ModLog.Error($"Encountered error when initializing {langName} CompiledLanguage object!");
-            }
-        }
 
         // determine the language order by reading config
         // check if every current language is assigned a priority
@@ -171,8 +199,11 @@ internal class LocalizationPatcher : BlasMod
         {
             foreach (CompiledLanguage language in compiledLanguages.FindAll(l => l.languageName == langName))
             {
+#if DEBUG
+                ModLog.Info($"Compiling {langName} to game");
+#endif
                 language.GetAndUpdateLanguageIndex();
-                language.UpdateAllTermsToGame();
+                language.WriteAllTermsToGame();
             }
         }
 
@@ -195,13 +226,30 @@ internal class LocalizationPatcher : BlasMod
         }
 #endif
 
+        // restore the selected language if it still exists
+        // restore the selected language if it still exists
+        /*
+        if (Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(playerCurrentLanguage)))
+        {
+            I2.Loc.LocalizationManager.CurrentLanguage = playerCurrentLanguage;
+            I2.Loc.LocalizationManager.CurrentLanguageCode = playerCurrentLanguageCode;
+            ModLog.Info($"Restoring selected language successful: {I2.Loc.LocalizationManager.CurrentLanguage}");
+        }
+        else
+        {
+            ModLog.Warn($"{playerCurrentLanguage} has been deleted by this mod, defaulting current language to English.");
+            I2.Loc.LocalizationManager.CurrentLanguage = "English";
+            I2.Loc.LocalizationManager.CurrentLanguageCode = "en";
+        }
+        */
+
         ConfigHandler.Save<Config>(config);
     }
 
 
     internal static void AddLanguageToGame(string langName, string langCode)
     {
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
         {
             source.AddLanguage(langName, langCode);
         }
@@ -209,7 +257,7 @@ internal class LocalizationPatcher : BlasMod
 
     internal static void RemoveLanguageFromGame(string langName)
     {
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
         {
             source.RemoveLanguage(langName);
         }
@@ -217,7 +265,7 @@ internal class LocalizationPatcher : BlasMod
 
     internal static void GetAllLanguageNamesAndCodes(ref List<string> names, ref List<string> codes)
     {
-        LanguageSource source = LocalizationManager.Sources[0];
+        LanguageSource source = I2.Loc.LocalizationManager.Sources[0];
         names = source.GetLanguages();
         codes = source.GetLanguagesCode();
     }
@@ -228,7 +276,7 @@ internal class LocalizationPatcher : BlasMod
     internal int SortPatchingOrder(LanguagePatch x, LanguagePatch y)
     {
         if (x == null || y == null) return 0;
-        else if (x != null  && y == null) return 1;
+        else if (x != null && y == null) return 1;
         else if (x == null && y != null) return -1;
 
         // x!= null && y != null

@@ -1,5 +1,4 @@
-﻿using Blasphemous.ModdingAPI;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher;
 

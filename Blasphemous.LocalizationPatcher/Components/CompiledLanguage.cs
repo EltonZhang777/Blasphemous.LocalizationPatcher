@@ -1,9 +1,7 @@
 ﻿using Blasphemous.ModdingAPI;
 using I2.Loc;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
@@ -59,6 +57,13 @@ public class CompiledLanguage
     {
         languageName = langName;
         languageCode = langCode;
+
+        termKeys = Main.LocalizationPatcher.allPossibleKeys;
+        int keyCount = termKeys.Count;
+        termPrefixes = new(Enumerable.Repeat(string.Empty, keyCount));
+        termContents = new(Enumerable.Repeat(string.Empty, keyCount));
+        termSuffixes = new(Enumerable.Repeat(string.Empty, keyCount));
+
         GetAndUpdateLanguageIndex();
     }
 
@@ -113,7 +118,7 @@ public class CompiledLanguage
     /// returns false if process failed
     /// </summary>
     /// <param name="termKey">Key of the term that needs to be updated</param>
-    public bool TryUpdateTermToGame(string termKey)
+    public bool TryWriteTermToGame(string termKey)
     {
         bool result = false;
 
@@ -135,7 +140,7 @@ public class CompiledLanguage
     /// <summary>
     /// load all the terms of CompiledLanguage object into Blasphemous
     /// </summary>
-    public void UpdateAllTermsToGame()
+    public void WriteAllTermsToGame()
     {
         int successfulCount = 0;
         int keyErrorCount = 0;
@@ -144,11 +149,11 @@ public class CompiledLanguage
         // true => this term has keyError
         List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(true, termKeys.Count));
 
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
         {
             for (int i = 0; i < termKeys.Count; i++)
             {
-                if (TryUpdateTermToGame(termKeys[i]))
+                if (TryWriteTermToGame(termKeys[i]))
                 {
                     keyErrorFlags[i] = false;
                 }
@@ -185,7 +190,7 @@ public class CompiledLanguage
     /// returns false if process failed
     /// </summary>
     /// <param name="termKey">Key of the term that needs to be updated</param>
-    public bool TryLoadTermFromGame(string termKey)
+    public bool TryReadTermFromGame(string termKey)
     {
         bool result = false;
 
@@ -206,20 +211,27 @@ public class CompiledLanguage
     /// <summary>
     /// load all translation terms in game to this object
     /// </summary>
-    public void LoadAllTermsFromGame()
+    public void ReadAllTermsFromGame()
     {
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        GetAndUpdateLanguageIndex();
+        for (int i = 0; i < termKeys.Count; i++)
         {
-            for (int i = 0; i < termKeys.Count; i++)
+            bool success = false;
+            foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
             {
-                TryLoadTermFromGame(termKeys[i]);
+                success |= TryReadTermFromGame(termKeys[i]);
+            }
+
+            if (!success)
+            {
+                ModLog.Warn($"Error loading term {termKeys[i]} from language {languageName}");
             }
         }
     }
 
     /// <summary>
-    /// Updates the index, 
-    /// and register a new language if the specified langauge is not found.
+    /// Updates the index of the langauge in the LocalizationManager to this object, 
+    /// or register a new language if the specified langauge is not found.
     /// </summary>
     internal void GetAndUpdateLanguageIndex()
     {
