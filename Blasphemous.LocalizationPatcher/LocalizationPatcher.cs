@@ -4,7 +4,6 @@ using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 
@@ -30,6 +29,8 @@ internal class LocalizationPatcher : BlasMod
     internal EventHandler EventHandler { get; } = new();
 
     private string _keyStorageFileName = "KeyDisplay_kd_base.txt";
+    private bool _firstMainMenuEnterFlag = true;
+    private string _selectedLangaugeInOptions;
 
 
     protected override void OnInitialize()
@@ -71,12 +72,11 @@ internal class LocalizationPatcher : BlasMod
 
     protected override void OnAllInitialized()
     {
-        ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches to the game");
+        ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches from all mod registers");
 
         // store the language selected by the player in settings, so that it can be restored after patching completes
-        string playerCurrentLanguage = I2.Loc.LocalizationManager.CurrentLanguage;
-        string playerCurrentLanguageCode = I2.Loc.LocalizationManager.CurrentLanguageCode;
-        ModLog.Info($"Stored current language selection: {playerCurrentLanguage}");
+        _selectedLangaugeInOptions = I2.Loc.LocalizationManager.CurrentLanguage;
+        ModLog.Info($"Stored current language selection: {_selectedLangaugeInOptions}");
 
 
         // Remove disabled languages in the game first
@@ -121,7 +121,6 @@ internal class LocalizationPatcher : BlasMod
         }
 
 
-
         // load in all registered language `.txt` patch files
         //   and construct their corresponding LanguagePatch objects.
         // skip all disabled languages and disabled patches
@@ -159,7 +158,6 @@ internal class LocalizationPatcher : BlasMod
         foreach (LanguagePatch patch in LanguagePatchRegister._patches)
         {
             patch.CompileText();
-            ModLog.Info($"patch name: {patch.patchName}");
         }
 
 
@@ -199,9 +197,6 @@ internal class LocalizationPatcher : BlasMod
         {
             foreach (CompiledLanguage language in compiledLanguages.FindAll(l => l.languageName == langName))
             {
-#if DEBUG
-                ModLog.Info($"Compiling {langName} to game");
-#endif
                 language.GetAndUpdateLanguageIndex();
                 language.WriteAllTermsToGame();
             }
@@ -227,23 +222,39 @@ internal class LocalizationPatcher : BlasMod
 #endif
 
         // restore the selected language if it still exists
-        // restore the selected language if it still exists
-        /*
-        if (Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(playerCurrentLanguage)))
+
+        if (Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(_selectedLangaugeInOptions)))
         {
-            I2.Loc.LocalizationManager.CurrentLanguage = playerCurrentLanguage;
-            I2.Loc.LocalizationManager.CurrentLanguageCode = playerCurrentLanguageCode;
+            I2.Loc.LocalizationManager.CurrentLanguage = _selectedLangaugeInOptions;
             ModLog.Info($"Restoring selected language successful: {I2.Loc.LocalizationManager.CurrentLanguage}");
         }
         else
         {
-            ModLog.Warn($"{playerCurrentLanguage} has been deleted by this mod, defaulting current language to English.");
-            I2.Loc.LocalizationManager.CurrentLanguage = "English";
-            I2.Loc.LocalizationManager.CurrentLanguageCode = "en";
+            ModLog.Warn($"{_selectedLangaugeInOptions} not found in localization directory. It might have been deleted by this mod");
+            if (!string.IsNullOrEmpty(I2.Loc.LocalizationManager.GetSupportedLanguage("English")))
+            {
+                ModLog.Info($"Restoring current language to English");
+                _selectedLangaugeInOptions = "English";
+                //UIController.instance.GetOptionsWidget().Option_AcceptGameOptions();
+                //ModLog.Info($"Current language: {I2.Loc.LocalizationManager.CurrentLanguage}");
+            }
+            else
+            {
+                ModLog.Warn($"Failed to restore current language to English.");
+            }
         }
-        */
 
         ConfigHandler.Save<Config>(config);
+    }
+
+    protected override void OnLevelLoaded(string oldLevel, string newLevel)
+    {
+        // Restore langauge option to the user-selected langauge after initialization
+        if (!newLevel.Equals("MainMenu") || !_firstMainMenuEnterFlag)
+            return;
+
+        _firstMainMenuEnterFlag = false;
+        I2.Loc.LocalizationManager.CurrentLanguage = _selectedLangaugeInOptions;
     }
 
 
@@ -275,16 +286,21 @@ internal class LocalizationPatcher : BlasMod
     /// </summary>
     internal int SortPatchingOrder(LanguagePatch x, LanguagePatch y)
     {
-        if (x == null || y == null) return 0;
-        else if (x != null && y == null) return 1;
-        else if (x == null && y != null) return -1;
+        if (x == null || y == null)
+            return 0;
+        else if (x != null && y == null)
+            return 1;
+        else if (x == null && y != null)
+            return -1;
 
-        // x!= null && y != null
+        // x != null && y != null
         // Compare mod order first
         int xModIndex = config.patchingModOrder.IndexOf(x.parentModId);
         int yModIndex = config.patchingModOrder.IndexOf(y.parentModId);
-        if (xModIndex > yModIndex) return 1;
-        else if (xModIndex < yModIndex) return -1;
+        if (xModIndex > yModIndex)
+            return 1;
+        else if (xModIndex < yModIndex)
+            return -1;
 
         // xModIndex == yModIndex
         // Mod order same, compare order within same mod

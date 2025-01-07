@@ -124,7 +124,7 @@ public class LanguagePatch
         int nearEmptyTermCount = 0;
         int valueEmptyTermCount = 0;
         string[] rawTextSplit = rawText.Split('\n');
-        
+
         foreach (string line in rawTextSplit)
         {
             // a line with less than 5 characters (usually empty line) is definitely not a valid term
@@ -224,9 +224,9 @@ public class LanguagePatch
     /// </summary>
     protected void OnFlagChange(string flagId)
     {
-        if (flagId != patchFlag) 
+        if (flagId != patchFlag)
             return;
-        if (Core.Events.GetFlag(flagId) == false) 
+        if (Core.Events.GetFlag(flagId) == false)
             return;
         CompileText();
     }
