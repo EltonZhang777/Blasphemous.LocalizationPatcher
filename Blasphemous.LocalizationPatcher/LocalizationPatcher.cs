@@ -5,10 +5,10 @@ using Blasphemous.LocalizationPatcher.Events;
 using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using static I2.Loc.ScriptLocalization;
 
 namespace Blasphemous.LocalizationPatcher;
 
@@ -50,7 +50,7 @@ internal class LocalizationPatcher : BlasMod
         allPossibleKeys = allPossibleKeys.Distinct().ToList();
         */
         FileHandler.LoadDataAsText(_keyStorageFileName, out string keysString);
-        allPossibleKeys = new LanguagePatch("temp", "temp", "temp", keysString).termKeys.Distinct().ToList();
+        allPossibleKeys = new LanguagePatch("temp", "temp", "temp", keysString).patchTerms.Select(x => x.termKey).Distinct().ToList();
     }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
@@ -74,11 +74,12 @@ internal class LocalizationPatcher : BlasMod
             ModLog.Info($"Loading debug test patch `{Path.GetFileNameWithoutExtension(testPatchName)}`");
 
             Main.LocalizationPatcher.FileHandler.LoadDataAsText(testPatchName, out string debugPatchText);
-            provider.RegisterLanguagePatch(new LanguagePatch(
+            LanguagePatch debugPatch = new LanguagePatch(
                 "Debug_patch_localization_key_display",
                 "KeyDisplay",
                 "kd",
-                debugPatchText));
+                debugPatchText);
+            provider.RegisterLanguagePatch(debugPatch);
 
             provider.RegisterLanguagePatch(new LanguagePatch(
                 "Debug_patch_addition_patch",
@@ -86,6 +87,10 @@ internal class LocalizationPatcher : BlasMod
                 "kd",
                 "UI_Map/LABEL_MENU_LANGUAGENAME -> AppendAtBeginning : test ",
                 LanguagePatch.PatchType.Manually));
+
+            File.WriteAllText(
+                FileHandler.ContentFolder + @"patch.json",
+                JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
         }
 #endif
     }
@@ -93,6 +98,7 @@ internal class LocalizationPatcher : BlasMod
 
     protected override void OnAllInitialized()
     {
+
         ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches from all mod registers");
 
         // store the language selected by the player in settings, so that it can be restored after patching completes
@@ -300,7 +306,6 @@ internal class LocalizationPatcher : BlasMod
         codes = source.GetLanguagesCode();
     }
 
-    
 }
 
 

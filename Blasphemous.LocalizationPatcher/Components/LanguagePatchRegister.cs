@@ -1,5 +1,4 @@
 ﻿using Blasphemous.ModdingAPI;
-using Epic.OnlineServices;
 using System.Collections.Generic;
 using System.Linq;
 

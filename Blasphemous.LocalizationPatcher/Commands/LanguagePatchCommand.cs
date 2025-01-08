@@ -1,7 +1,5 @@
 ﻿using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Components;
-using Blasphemous.ModdingAPI;
-using Mono.Security.Cryptography;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +25,7 @@ internal class LanguagePatchCommand : ModCommand
 
     private void SubCommand_Help(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 0)) 
+        if (!ValidateParameterList(parameters, 0))
             return;
 
         Write($"Available {CommandName} commands:");

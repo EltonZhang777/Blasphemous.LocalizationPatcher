@@ -69,46 +69,58 @@ public class CompiledLanguage
     /// Update a term in the CompiledLanguage object. 
     /// Returns false if an error occured.
     /// </summary>
-    /// <param name="key"> key of the term being updated </param>
-    /// <param name="text"> text of the term </param>
-    /// <param name="operation"> operation of the term</param>
-    public bool TryUpdateTerm(string key, string text, string operation)
+    public bool TryUpdateTerm(string key, string text, PatchTerm.TermOperation operation)
     {
 
-        // if the key isn't registered, register the key and all 3 types of contents
+        // if the key isn't registered, it must be an invalid key
         if (!termKeys.Contains(key))
         {
-            termKeys.Add(key);
-            termPrefixes.Add(string.Empty);
-            termContents.Add(string.Empty);
-            termSuffixes.Add(string.Empty);
+            ModLog.Error($"Term key `{key}` is invalid!");
+            return false;
         }
         int termIndex = termKeys.IndexOf(key);
 
-        if (operation.Equals("Replace"))
+        if (operation == PatchTerm.TermOperation.Replace)
         {
             termContents[termIndex] = text;
         }
-        else if (operation.Equals("ReplaceAll"))
+        else if (operation == PatchTerm.TermOperation.ReplaceAll)
         {
             termContents[termIndex] = text;
             RemovePrefixAndSuffix(key);
         }
-        else if (operation.Equals("AppendAtBeginning") || operation.Equals("Prefix"))
+        else if (operation == PatchTerm.TermOperation.Prefix)
         {
             termPrefixes[termIndex] = text + termPrefixes[termIndex];
         }
-        else if (operation.Equals("AppendAtEnd") || operation.Equals("Suffix"))
+        else if (operation == PatchTerm.TermOperation.Suffix)
         {
             termSuffixes[termIndex] = termSuffixes[termIndex] + text;
         }
         else
         {
-            ModLog.Error($"term {key} calls for unsupported operation method {operation}, " +
-                            $"skipping this term.");
+            ModLog.Error($"Term of key `{key}` calls for unsupported operation method {operation}, skipping this term.");
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Update a term in the CompiledLanguage object. 
+    /// Returns false if an error occured.
+    /// </summary>
+    public bool TryUpdateTerm(string key, string text, string operation)
+    {
+        return TryUpdateTerm(key, text, PatchTerm.ParseToTermOperation(operation));
+    }
+
+    /// <summary>
+    /// Update a term in the CompiledLanguage object. 
+    /// Returns false if an error occured.
+    /// </summary>
+    public bool TryUpdateTerm(PatchTerm term)
+    {
+        return TryUpdateTerm(term.termKey, term.termContent, term.termOperation);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ﻿using Blasphemous.ModdingAPI;
 using Framework.Managers;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher.Components;
@@ -48,19 +49,10 @@ public class LanguagePatch
     public string patchFlag;
 
     /// <summary>
-    /// All the term keys of the language terms.
+    /// All the patch terms of this patch
     /// </summary>
-    public List<string> termKeys = new();
-
-    /// <summary>
-    /// All the term contents of the language terms.
-    /// </summary>
-    public List<string> termContents = new();
-
-    /// <summary>
-    /// All the operations to be executed to the language terms.
-    /// </summary>
-    public List<string> termOperations = new();
+    [JsonProperty]
+    public List<PatchTerm> patchTerms = new();
 
     internal bool isApplied = false;
 
@@ -98,7 +90,7 @@ public class LanguagePatch
     /// <param name="patchName">see <see cref="patchName"/></param>
     /// <param name="langName">see <see cref="languageName"/></param>
     /// <param name="langCode">see <see cref="languageCode"/></param>
-    /// <param name="fullText">Full text passed in by `FileHandler.LoadDataAsText`</param>
+    /// <param name="patchText">Full text passed in by `FileHandler.LoadDataAsText`</param>
     /// <param name="order">see <see cref="patchOrder"/></param>
     /// <param name="type">see <see cref="patchType"/></param>
     /// <param name="flag">see <see cref="patchFlag"/></param>
@@ -106,7 +98,7 @@ public class LanguagePatch
         string patchName,
         string langName,
         string langCode,
-        string fullText,
+        string patchText,
         PatchType type = PatchType.OnInitialize,
         string flag = null,
         int order = 0)
@@ -120,13 +112,14 @@ public class LanguagePatch
         if (type == PatchType.OnFlag && (flag == null || flag == string.Empty))
         {
             ModLog.Error($"Missing flag for patch {patchName} that must be triggered by a specific flag!");
+            return;
         }
         else if (type == PatchType.OnFlag && flag != null && flag != string.Empty)
         {
             Main.LocalizationPatcher.EventHandler.OnFlagChange += OnFlagChange;
         }
 
-        LoadText(fullText);
+        LoadText(patchText);
     }
 
     /// <summary>
@@ -162,9 +155,7 @@ public class LanguagePatch
             // load key, operationType, and value into corresponding lists
             if (value != string.Empty)
             {
-                termKeys.Add(key);
-                termContents.Add(value);
-                termOperations.Add(operationType);
+                patchTerms.Add(new(key, value, operationType));
             }
             else
             {
@@ -173,7 +164,7 @@ public class LanguagePatch
                 valueEmptyTermCount++;
             }
         }
-        ModLog.Info($"Successfully loaded {termKeys.Count} of {rawTextSplit.Length} terms of {languageName} for patch `{patchName}`");
+        ModLog.Info($"Successfully loaded {patchTerms.Count} of {rawTextSplit.Length} terms of {languageName} for patch `{patchName}`");
         if (nearEmptyTermCount + valueEmptyTermCount > 0)
         {
             ModLog.Warn($"Skipped {nearEmptyTermCount} near-empty terms " +
@@ -209,12 +200,9 @@ public class LanguagePatch
         Main.LocalizationPatcher.compiledLanguages[LanguageIndex].patchesApplied.Add(patchName);
 
         // compile each term patch to the CompiledLanguage object
-        for (int i = 0; i < termKeys.Count; i++)
+        for (int i = 0; i < patchTerms.Count; i++)
         {
-            if (!Main.LocalizationPatcher.compiledLanguages[LanguageIndex].TryUpdateTerm(
-                    termKeys[i],
-                    termContents[i],
-                    termOperations[i]))
+            if (!Main.LocalizationPatcher.compiledLanguages[LanguageIndex].TryUpdateTerm(patchTerms[i]))
             {
                 operationErrorCount++;
             }
@@ -224,7 +212,7 @@ public class LanguagePatch
             }
         }
 
-        ModLog.Info($"Successfully patched {successfulCount} of {termKeys.Count} terms for {languageName} from patch `{patchName}` into the game");
+        ModLog.Info($"Successfully patched {successfulCount} of {patchTerms.Count} terms for {languageName} from patch `{patchName}` into the game");
         if (operationErrorCount > 0)
         {
             ModLog.Warn($"Skipped {operationErrorCount} terms with invalid operation type.\n");
