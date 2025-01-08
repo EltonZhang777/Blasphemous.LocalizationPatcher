@@ -1,4 +1,5 @@
 ﻿using Blasphemous.ModdingAPI;
+using Epic.OnlineServices;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -10,7 +11,7 @@ namespace Blasphemous.LocalizationPatcher.Components;
 public static class LanguagePatchRegister
 {
 
-    internal static readonly List<LanguagePatch> _patches = new();
+    private static readonly List<LanguagePatch> _patches = new();
     internal static IEnumerable<LanguagePatch> Patches => _patches;
     internal static LanguagePatch AtIndex(int index) => _patches[index];
     internal static int Total => _patches.Count;
@@ -33,6 +34,37 @@ public static class LanguagePatchRegister
         patch.parentModId = provider.RegisteringMod.Id;
         _patches.Add(patch);
         ModLog.Info($"Registered custom LanguagePatch: {patch.patchName}");
+    }
+
+    internal static void SortPatchOrder()
+    {
+        _patches.Sort(PatchOrderSorter);
+    }
+
+    /// <summary>
+    /// Sort patching order first by mod order, then by patchOrder
+    /// </summary>
+    private static int PatchOrderSorter(LanguagePatch x, LanguagePatch y)
+    {
+        if (x == null || y == null)
+            return 0;
+        else if (x != null && y == null)
+            return 1;
+        else if (x == null && y != null)
+            return -1;
+
+        // x != null && y != null
+        // Compare mod order first
+        int xModIndex = Main.LocalizationPatcher.config.patchingModOrder.IndexOf(x.parentModId);
+        int yModIndex = Main.LocalizationPatcher.config.patchingModOrder.IndexOf(y.parentModId);
+        if (xModIndex > yModIndex)
+            return 1;
+        else if (xModIndex < yModIndex)
+            return -1;
+
+        // xModIndex == yModIndex
+        // Mod order same, compare order within same mod
+        return x.patchOrder.CompareTo(y.patchOrder);
     }
 }
 

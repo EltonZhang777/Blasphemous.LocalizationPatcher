@@ -80,8 +80,15 @@ public class LanguagePatch
 
 
     /// <summary>
+    /// The corresponding languageIndex of the CompiledLanguage object
+    /// </summary>
+    internal int LanguageIndex => Main.LocalizationPatcher.compiledLanguages.FindIndex(l => l.languageName == languageName);
+
+
+    /// <summary>
     /// Pass in the `fullText` parameter by `FileHandler.LoadDataAsText`. 
     /// </summary>
+    /// <param name="patchName">see <see cref="patchName"/></param>
     /// <param name="langName">see <see cref="languageName"/></param>
     /// <param name="langCode">see <see cref="languageCode"/></param>
     /// <param name="fullText">Full text passed in by `FileHandler.LoadDataAsText`</param>
@@ -89,6 +96,7 @@ public class LanguagePatch
     /// <param name="type">see <see cref="patchType"/></param>
     /// <param name="flag">see <see cref="patchFlag"/></param>
     public LanguagePatch(
+        string patchName,
         string langName,
         string langCode,
         string fullText,
@@ -96,6 +104,7 @@ public class LanguagePatch
         PatchType type = PatchType.OnInitialize,
         string flag = null)
     {
+        this.patchName = patchName;
         languageName = langName;
         languageCode = langCode;
         patchOrder = order;
@@ -103,9 +112,7 @@ public class LanguagePatch
         patchFlag = flag;
         if (type == PatchType.OnFlag && (flag == null || flag == string.Empty))
         {
-            string errMsg = $"Missing flag for patch {patchName} that must be triggered by a specific flag!";
-            ModLog.Error(errMsg);
-            throw new System.ArgumentNullException(errMsg);
+            ModLog.Error($"Missing flag for patch {patchName} that must be triggered by a specific flag!");
         }
         else if (type == PatchType.OnFlag && flag != null && flag != string.Empty)
         {
@@ -187,15 +194,14 @@ public class LanguagePatch
         {
             Main.LocalizationPatcher.compiledLanguages.Add(new CompiledLanguage(languageName, languageCode));
         }
-        int languageIndex = Main.LocalizationPatcher.compiledLanguages.FindIndex(l => l.languageName == languageName);
 
         // record this patch to the CompiledLanguage object
-        Main.LocalizationPatcher.compiledLanguages[languageIndex].patchesApplied.Add(patchName);
+        Main.LocalizationPatcher.compiledLanguages[LanguageIndex].patchesApplied.Add(patchName);
 
         // compile each term patch to the CompiledLanguage object
         for (int i = 0; i < termKeys.Count; i++)
         {
-            if (!Main.LocalizationPatcher.compiledLanguages[languageIndex].TryUpdateTerm(
+            if (!Main.LocalizationPatcher.compiledLanguages[LanguageIndex].TryUpdateTerm(
                     termKeys[i],
                     termContents[i],
                     termOperations[i]))
@@ -228,6 +234,8 @@ public class LanguagePatch
             return;
         if (Core.Events.GetFlag(flagId) == false)
             return;
+
         CompileText();
+        Main.LocalizationPatcher.compiledLanguages[LanguageIndex].WriteAllTermsToGame();
     }
 }

@@ -63,8 +63,6 @@ public class CompiledLanguage
         termPrefixes = new(Enumerable.Repeat(string.Empty, keyCount));
         termContents = new(Enumerable.Repeat(string.Empty, keyCount));
         termSuffixes = new(Enumerable.Repeat(string.Empty, keyCount));
-
-        GetAndUpdateLanguageIndex();
     }
 
     /// <summary>
@@ -142,6 +140,7 @@ public class CompiledLanguage
     /// </summary>
     public void WriteAllTermsToGame()
     {
+        GetAndUpdateLanguageIndex();
         int successfulCount = 0;
         int keyErrorCount = 0;
 

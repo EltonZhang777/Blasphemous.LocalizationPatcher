@@ -47,7 +47,7 @@ internal class LocalizationPatcher : BlasMod
         allPossibleKeys = allPossibleKeys.Distinct().ToList();
         */
         FileHandler.LoadDataAsText(_keyStorageFileName, out string keysString);
-        allPossibleKeys = new LanguagePatch("temp", "temp", keysString).termKeys.Distinct().ToList();
+        allPossibleKeys = new LanguagePatch("temp", "temp", "temp", keysString).termKeys.Distinct().ToList();
     }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
@@ -62,6 +62,7 @@ internal class LocalizationPatcher : BlasMod
 
             Main.LocalizationPatcher.FileHandler.LoadDataAsText(testPatchName, out string debugPatchText);
             provider.RegisterLanguagePatch(new LanguagePatch(
+                "Debug patch - localization key display",
                 "KeyDisplay",
                 "kd",
                 debugPatchText));
@@ -152,10 +153,9 @@ internal class LocalizationPatcher : BlasMod
         // save current config into the config file
         ConfigHandler.Save<Config>(config);
 
-        // Load each langauge patch into CompiledLanguage object of corresponding language,
-        //   based on priority in config.
-        LanguagePatchRegister._patches.Sort(SortPatchingOrder);
-        foreach (LanguagePatch patch in LanguagePatchRegister._patches)
+        // Load each langauge patch that are loaded on initialization into CompiledLanguage object of corresponding language based on priority in config.
+        LanguagePatchRegister.SortPatchOrder();
+        foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnInitialize))
         {
             patch.CompileText();
         }
@@ -197,7 +197,6 @@ internal class LocalizationPatcher : BlasMod
         {
             foreach (CompiledLanguage language in compiledLanguages.FindAll(l => l.languageName == langName))
             {
-                language.GetAndUpdateLanguageIndex();
                 language.WriteAllTermsToGame();
             }
         }
@@ -281,31 +280,7 @@ internal class LocalizationPatcher : BlasMod
         codes = source.GetLanguagesCode();
     }
 
-    /// <summary>
-    /// Sort patching order first by mod order, then by patchOrder
-    /// </summary>
-    internal int SortPatchingOrder(LanguagePatch x, LanguagePatch y)
-    {
-        if (x == null || y == null)
-            return 0;
-        else if (x != null && y == null)
-            return 1;
-        else if (x == null && y != null)
-            return -1;
-
-        // x != null && y != null
-        // Compare mod order first
-        int xModIndex = config.patchingModOrder.IndexOf(x.parentModId);
-        int yModIndex = config.patchingModOrder.IndexOf(y.parentModId);
-        if (xModIndex > yModIndex)
-            return 1;
-        else if (xModIndex < yModIndex)
-            return -1;
-
-        // xModIndex == yModIndex
-        // Mod order same, compare order within same mod
-        return x.patchOrder.CompareTo(y.patchOrder);
-    }
+    
 }
 
 
