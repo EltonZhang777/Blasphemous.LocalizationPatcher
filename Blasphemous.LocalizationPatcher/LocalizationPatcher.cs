@@ -1,4 +1,6 @@
-﻿using Blasphemous.LocalizationPatcher.Components;
+﻿using Blasphemous.CheatConsole;
+using Blasphemous.LocalizationPatcher.Commands;
+using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
 using Blasphemous.ModdingAPI;
 using Framework.Managers;
@@ -6,6 +8,7 @@ using I2.Loc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using static I2.Loc.ScriptLocalization;
 
 namespace Blasphemous.LocalizationPatcher;
 
@@ -52,6 +55,16 @@ internal class LocalizationPatcher : BlasMod
 
     protected override void OnRegisterServices(ModServiceProvider provider)
     {
+        // register commands
+        List<ModCommand> commands =
+            [
+            new LanguagePatchCommand()
+            ];
+        foreach (ModCommand command in commands)
+        {
+            provider.RegisterCommand(command);
+        }
+
 #if DEBUG
         // load the debug test patch
         string testPatchName = "KeyDisplay_kd_base.txt";
@@ -62,10 +75,17 @@ internal class LocalizationPatcher : BlasMod
 
             Main.LocalizationPatcher.FileHandler.LoadDataAsText(testPatchName, out string debugPatchText);
             provider.RegisterLanguagePatch(new LanguagePatch(
-                "Debug patch - localization key display",
+                "Debug_patch_localization_key_display",
                 "KeyDisplay",
                 "kd",
                 debugPatchText));
+
+            provider.RegisterLanguagePatch(new LanguagePatch(
+                "Debug_patch_addition_patch",
+                "KeyDisplay",
+                "kd",
+                "UI_Map/LABEL_MENU_LANGUAGENAME -> AppendAtBeginning : test ",
+                LanguagePatch.PatchType.Manually));
         }
 #endif
     }

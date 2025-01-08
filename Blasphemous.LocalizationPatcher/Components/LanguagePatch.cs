@@ -62,6 +62,8 @@ public class LanguagePatch
     /// </summary>
     public List<string> termOperations = new();
 
+    internal bool isApplied = false;
+
     /// <summary>
     /// Enum object describing when the patch should be applied
     /// </summary>
@@ -75,7 +77,12 @@ public class LanguagePatch
         /// <summary>
         /// Patched when a certain flag's value is `true`
         /// </summary>
-        OnFlag
+        OnFlag,
+
+        /// <summary>
+        /// Patched manually through command console
+        /// </summary>
+        Manually
     }
 
 
@@ -100,9 +107,9 @@ public class LanguagePatch
         string langName,
         string langCode,
         string fullText,
-        int order = 0,
         PatchType type = PatchType.OnInitialize,
-        string flag = null)
+        string flag = null,
+        int order = 0)
     {
         this.patchName = patchName;
         languageName = langName;
@@ -180,10 +187,13 @@ public class LanguagePatch
 
     /// <summary>
     /// load and compile all terms from the `LanguagePatch` class object 
-    /// into their corresponding CompiledLanguage object
+    /// into their corresponding `CompiledLanguage` object
     /// </summary>
     public void CompileText()
     {
+        if (isApplied)
+            ModLog.Warn($"Attempting to reapply patch {patchName}!");
+
         // counting successful and failed operations
         int successfulCount = 0;
         int operationErrorCount = 0;
@@ -223,6 +233,8 @@ public class LanguagePatch
         {
             ModLog.Info($"Compiling process encountered no error.\n");
         }
+
+        isApplied = true;
     }
 
     /// <summary>
