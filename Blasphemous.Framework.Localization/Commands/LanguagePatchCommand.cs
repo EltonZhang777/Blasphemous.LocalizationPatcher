@@ -1,5 +1,5 @@
 ﻿using Blasphemous.CheatConsole;
-using Blasphemous.LocalizationPatcher.Components;
+using Blasphemous.Framework.Localization.Components;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Blasphemous.LocalizationPatcher.Commands;
+namespace Blasphemous.Framework.Localization.Commands;
 
 internal class LanguagePatchCommand : ModCommand
 {
@@ -35,7 +35,7 @@ internal class LanguagePatchCommand : ModCommand
         Write($"{CommandName} list : list all loaded language patches");
         Write($"{CommandName} list [applied/inactive] : list all applied/inactive language patches");
         Write($"{CommandName} apply [patchName] : apply the specified language patch");
-        Write($"{CommandName} export [patchName]: export the specified language patch to `Modding/content/{Main.LocalizationPatcher.Name}/[patchName].json`");
+        Write($"{CommandName} export [patchName]: export the specified language patch to `Modding/content/{Main.LocalizationFramework.Name}/[patchName].json`");
     }
 
 
@@ -90,7 +90,7 @@ internal class LanguagePatchCommand : ModCommand
         index = languagePatches.IndexOf(targetPatch);
         LanguagePatchRegister.AtIndex(index).CompileText();
         index = languagePatches.First(x => x.patchName.Equals(parameters[0])).LanguageIndex;
-        Main.LocalizationPatcher.compiledLanguages[index].WriteAllTermsToGame();
+        Main.LocalizationFramework.compiledLanguages[index].WriteAllTermsToGame();
 
         Write($"Successfully applied patch {parameters[0]}!");
         Write($"Patches applied through commands are only active until exiting game process");
@@ -109,9 +109,9 @@ internal class LanguagePatchCommand : ModCommand
 
         LanguagePatch targetPatch = LanguagePatchRegister.Patches.ToList().First(x => x.patchName.Equals(parameters[0]));
         File.WriteAllText(
-            Main.LocalizationPatcher.FileHandler.ContentFolder + $"{targetPatch.patchName}.json",
+            Main.LocalizationFramework.FileHandler.ContentFolder + $"{targetPatch.patchName}.json",
             JsonConvert.SerializeObject(targetPatch, Formatting.Indented));
-        Write($"Successfully exported selected language patch to `Modding/content/{Main.LocalizationPatcher.Name}/{targetPatch.patchName}.json`");
+        Write($"Successfully exported selected language patch to `Modding/content/{Main.LocalizationFramework.Name}/{targetPatch.patchName}.json`");
     }
 
     private bool ValidateParameterList(string[] parameters, List<int> validParameterLengths)

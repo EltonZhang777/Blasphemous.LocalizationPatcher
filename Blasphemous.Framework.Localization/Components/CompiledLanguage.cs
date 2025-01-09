@@ -3,7 +3,7 @@ using I2.Loc;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Blasphemous.LocalizationPatcher.Components;
+namespace Blasphemous.Framework.Localization.Components;
 
 /// <summary>
 /// Contains the information of each language (one object per language, not per patch). 
@@ -58,7 +58,7 @@ public class CompiledLanguage
         languageName = langName;
         languageCode = langCode;
 
-        termKeys = Main.LocalizationPatcher.allPossibleKeys;
+        termKeys = Main.LocalizationFramework.allPossibleKeys;
         int keyCount = termKeys.Count;
         termPrefixes = new(Enumerable.Repeat(string.Empty, keyCount));
         termContents = new(Enumerable.Repeat(string.Empty, keyCount));
@@ -250,7 +250,7 @@ public class CompiledLanguage
         int index = source.GetLanguageIndex(languageName);
         if (index == -1)
         {
-            LocalizationPatcher.AddLanguageToGame(languageName, languageCode);
+            LocalizationFramework.AddLanguageToGame(languageName, languageCode);
             index = source.GetLanguageIndex(languageName);
         }
         languageIndex = index;

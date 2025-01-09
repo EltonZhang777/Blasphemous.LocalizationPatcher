@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Blasphemous.LocalizationPatcher.Components;
+namespace Blasphemous.Framework.Localization.Components;
 
 /// <summary>
 /// Register handler for new language patches
@@ -54,8 +54,8 @@ public static class LanguagePatchRegister
 
         // x != null && y != null
         // Compare mod order first
-        int xModIndex = Main.LocalizationPatcher.config.patchingModOrder.IndexOf(x.parentModId);
-        int yModIndex = Main.LocalizationPatcher.config.patchingModOrder.IndexOf(y.parentModId);
+        int xModIndex = Main.LocalizationFramework.config.patchingModOrder.IndexOf(x.parentModId);
+        int yModIndex = Main.LocalizationFramework.config.patchingModOrder.IndexOf(y.parentModId);
         if (xModIndex > yModIndex)
             return 1;
         else if (xModIndex < yModIndex)
