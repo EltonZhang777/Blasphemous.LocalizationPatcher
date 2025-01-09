@@ -44,9 +44,9 @@ If this (or any other bug) occurs, locate your log file at `[your Blasphemous di
 
 	There are currently 4 types of edits supported by this mod:
 	
-	- `AppendAtBeginning`
+	- `Prefix` or `AppendAtBeginning`
 	 - Add your custom text as a prefix, attached to the beginning of the original text.
-	- `AppendAtEnd`
+	- `Suffix` or `AppendAtEnd`
 	 - Add your custom text as a suffix, attached to the end of the original text.
 	- `Replace`
 	 - Replace the original text with your custom text. Will not affect prefixes and suffixes added by this mod.
