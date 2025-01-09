@@ -1,5 +1,6 @@
 ﻿using Blasphemous.ModdingAPI;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +28,7 @@ public class PatchTerm
     /// Operation to be executed to the language term
     /// </summary>
     [JsonProperty]
+    [JsonConverter(typeof(StringEnumConverter))]
     public TermOperation termOperation;
 
     /// <summary>
@@ -69,6 +71,7 @@ public class PatchTerm
     /// <param name="termKey">see <see cref="termKey"/></param>
     /// <param name="termContent">see <see cref="termContent"/></param>
     /// <param name="termOperation">see <see cref="termOperation"/></param>
+    [JsonConstructor]
     public PatchTerm(
         string termKey,
         string termContent,

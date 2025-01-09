@@ -5,7 +5,6 @@ using Blasphemous.LocalizationPatcher.Events;
 using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,7 +30,8 @@ internal class LocalizationPatcher : BlasMod
 
     internal EventHandler EventHandler { get; } = new();
 
-    private string _keyStorageFileName = "KeyDisplay_kd_base.txt";
+    private string _debugPatchFileName = "Debug_patch_localization_key_display.json";
+    private LanguagePatch _debugPatch;
     private bool _firstMainMenuEnterFlag = true;
     private string _selectedLangaugeInOptions;
 
@@ -41,16 +41,15 @@ internal class LocalizationPatcher : BlasMod
         // load config
         config = ConfigHandler.Load<Config>();
 
-        // read all valid term keys that are used
-        /*
-        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+        if (!File.Exists(Path.GetFullPath(FileHandler.ModdingFolder + "data/" + base.Name + @"/" + _debugPatchFileName)))
         {
-            allPossibleKeys.AddRange(source.GetTermsList());
+            string errorMessage = $"debug patch not found!";
+            ModLog.Error(errorMessage);
+            throw new FileNotFoundException(errorMessage);
         }
-        allPossibleKeys = allPossibleKeys.Distinct().ToList();
-        */
-        FileHandler.LoadDataAsText(_keyStorageFileName, out string keysString);
-        allPossibleKeys = new LanguagePatch("temp", "temp", "temp", keysString).patchTerms.Select(x => x.termKey).Distinct().ToList();
+
+        FileHandler.LoadDataAsJson<LanguagePatch>(_debugPatchFileName, out _debugPatch);
+        allPossibleKeys = _debugPatch.patchTerms.Select(x => x.termKey).Distinct().ToList();
     }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
@@ -67,31 +66,31 @@ internal class LocalizationPatcher : BlasMod
 
 #if DEBUG
         // load the debug test patch
-        string testPatchName = "KeyDisplay_kd_base.txt";
+        provider.RegisterLanguagePatch(_debugPatch);
 
-        if (File.Exists(Path.GetFullPath(FileHandler.ModdingFolder + "data/" + base.Name + @"/" + testPatchName)))
-        {
-            ModLog.Info($"Loading debug test patch `{Path.GetFileNameWithoutExtension(testPatchName)}`");
+        provider.RegisterLanguagePatch(new LanguagePatch(
+            "Debug_patch_addition_patch",
+            "KeyDisplay",
+            "kd",
+            "UI_Map/LABEL_MENU_LANGUAGENAME -> AppendAtBeginning : test_",
+            LanguagePatch.PatchType.Manually));
 
-            Main.LocalizationPatcher.FileHandler.LoadDataAsText(testPatchName, out string debugPatchText);
-            LanguagePatch debugPatch = new LanguagePatch(
-                "Debug_patch_localization_key_display",
-                "KeyDisplay",
-                "kd",
-                debugPatchText);
-            provider.RegisterLanguagePatch(debugPatch);
+        // (de)serialization test
+        /*
+        ModLog.Info($"Start serializing LanguagePatch");
+        File.WriteAllText(
+            FileHandler.ContentFolder + @"test_patch.json",
+            JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
 
-            provider.RegisterLanguagePatch(new LanguagePatch(
-                "Debug_patch_addition_patch",
-                "KeyDisplay",
-                "kd",
-                "UI_Map/LABEL_MENU_LANGUAGENAME -> AppendAtBeginning : test ",
-                LanguagePatch.PatchType.Manually));
-
-            File.WriteAllText(
-                FileHandler.ContentFolder + @"patch.json",
-                JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
-        }
+        ModLog.Info($"Start deserializing to LanguagePatch");
+        LanguagePatch deserializedPatch = JsonConvert.DeserializeObject<LanguagePatch>(
+            JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
+        string reserializedJson = JsonConvert.SerializeObject(deserializedPatch, Formatting.Indented);
+        File.WriteAllText(
+            FileHandler.ContentFolder + @"reserialized_patch.json",
+            reserializedJson);
+        ModLog.Info($"json equal after reserialization? {reserializedJson.Equals(JsonConvert.SerializeObject(debugPatch, Formatting.Indented))}");
+        */
 #endif
     }
 
@@ -114,12 +113,12 @@ internal class LocalizationPatcher : BlasMod
             try
             {
                 RemoveLanguageFromGame(langName);
-                ModLog.Info($"Successfully removed {langName} from game.");
+                ModLog.Info($"  Successfully removed {langName} from game.");
                 removedLanguageCount++;
             }
             catch
             {
-                ModLog.Error($"Failed disabling language: language named \"{langName}\" not found!");
+                ModLog.Error($"  Failed disabling language: language named \"{langName}\" not found!");
             }
         }
         ModLog.Info($"Successfully removed {removedLanguageCount} languages from game.");
@@ -218,7 +217,7 @@ internal class LocalizationPatcher : BlasMod
         // save current config into the config file
         ConfigHandler.Save<Config>(config);
 
-        // Load each CompiledLanguage object into the game.
+        // Load each CompiledLanguage object into the game by the assigned order.
         foreach (string langName in config.languageOrder)
         {
             foreach (CompiledLanguage language in compiledLanguages.FindAll(l => l.languageName == langName))
@@ -246,8 +245,7 @@ internal class LocalizationPatcher : BlasMod
         }
 #endif
 
-        // restore the selected language if it still exists
-
+        // Prepare to restore the selected language if it still exists
         if (Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(_selectedLangaugeInOptions)))
         {
             I2.Loc.LocalizationManager.CurrentLanguage = _selectedLangaugeInOptions;
@@ -269,6 +267,7 @@ internal class LocalizationPatcher : BlasMod
             }
         }
 
+        // final config save
         ConfigHandler.Save<Config>(config);
     }
 
@@ -305,7 +304,6 @@ internal class LocalizationPatcher : BlasMod
         names = source.GetLanguages();
         codes = source.GetLanguagesCode();
     }
-
 }
 
 

@@ -1,6 +1,8 @@
 ﻿using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher.Components;
@@ -12,6 +14,12 @@ namespace Blasphemous.LocalizationPatcher.Components;
 public class LanguagePatch
 {
     /// <summary>
+    /// The patch name of the language file.
+    /// Patch name for language initialization files (containing all strings) is "base".
+    /// </summary>
+    public string patchName;
+
+    /// <summary>
     /// the name of the language
     /// </summary>
     public string languageName;
@@ -20,12 +28,6 @@ public class LanguagePatch
     /// the internal language code of the language
     /// </summary>
     public string languageCode;
-
-    /// <summary>
-    /// The patch name of the language file.
-    /// Patch name for language initialization files (containing all strings) is "base".
-    /// </summary>
-    public string patchName;
 
     /// <summary>
     /// The mod that registered the patch.
@@ -41,6 +43,7 @@ public class LanguagePatch
     /// <summary>
     /// Documenting when this patch should be applied
     /// </summary>
+    [JsonConverter(typeof(StringEnumConverter))]
     public PatchType patchType;
 
     /// <summary>
@@ -88,42 +91,81 @@ public class LanguagePatch
     /// Pass in the `fullText` parameter by `FileHandler.LoadDataAsText`. 
     /// </summary>
     /// <param name="patchName">see <see cref="patchName"/></param>
-    /// <param name="langName">see <see cref="languageName"/></param>
-    /// <param name="langCode">see <see cref="languageCode"/></param>
+    /// <param name="languageName">see <see cref="languageName"/></param>
+    /// <param name="languageCode">see <see cref="languageCode"/></param>
     /// <param name="patchText">Full text passed in by `FileHandler.LoadDataAsText`</param>
-    /// <param name="order">see <see cref="patchOrder"/></param>
-    /// <param name="type">see <see cref="patchType"/></param>
-    /// <param name="flag">see <see cref="patchFlag"/></param>
+    /// <param name="patchOrder">see <see cref="patchOrder"/></param>
+    /// <param name="patchType">see <see cref="patchType"/></param>
+    /// <param name="patchFlag">see <see cref="patchFlag"/></param>
+    [Obsolete($"Use JSON instead of txt files to import language patches for better compatibility. \nUse in-game command `languagepatch export [patchName]` to export your current language patches to JSON format")]
     public LanguagePatch(
         string patchName,
-        string langName,
-        string langCode,
+        string languageName,
+        string languageCode,
         string patchText,
-        PatchType type = PatchType.OnInitialize,
-        string flag = null,
-        int order = 0)
+        PatchType patchType = PatchType.OnInitialize,
+        string patchFlag = null,
+        int patchOrder = 0)
+        : this(patchName, languageName, languageCode, patchType, patchFlag, patchOrder)
     {
-        this.patchName = patchName;
-        languageName = langName;
-        languageCode = langCode;
-        patchOrder = order;
-        patchType = type;
-        patchFlag = flag;
-        if (type == PatchType.OnFlag && (flag == null || flag == string.Empty))
-        {
-            ModLog.Error($"Missing flag for patch {patchName} that must be triggered by a specific flag!");
-            return;
-        }
-        else if (type == PatchType.OnFlag && flag != null && flag != string.Empty)
-        {
-            Main.LocalizationPatcher.EventHandler.OnFlagChange += OnFlagChange;
-        }
-
         LoadText(patchText);
     }
 
     /// <summary>
-    /// load all terms from the raw string into term keys, contents, and operations
+    /// Passing in the `patchTerms` directly. JSON default constructor.
+    /// </summary>
+    /// <param name="patchName">see <see cref="patchName"/></param>
+    /// <param name="languageName">see <see cref="languageName"/></param>
+    /// <param name="languageCode">see <see cref="languageCode"/></param>
+    /// <param name="patchTerms">see <see cref="patchTerms"/></param>
+    /// <param name="patchOrder">see <see cref="patchOrder"/></param>
+    /// <param name="patchType">see <see cref="patchType"/></param>
+    /// <param name="patchFlag">see <see cref="patchFlag"/></param>
+    [JsonConstructor]
+    public LanguagePatch(
+        string patchName,
+        string languageName,
+        string languageCode,
+        List<PatchTerm> patchTerms,
+        PatchType patchType = PatchType.OnInitialize,
+        string patchFlag = null,
+        int patchOrder = 0)
+        : this(patchName, languageName, languageCode, patchType, patchFlag, patchOrder)
+    {
+        this.patchTerms = patchTerms;
+    }
+
+    /// <summary>
+    /// Private partial constructor, only invoked by other constructors
+    /// </summary>
+    private LanguagePatch(
+        string patchName,
+        string languageName,
+        string languageCode,
+        PatchType patchType = PatchType.OnInitialize,
+        string patchFlag = null,
+        int patchOrder = 0)
+    {
+        this.patchName = patchName.Trim().Replace(' ', '_');
+        this.languageName = languageName;
+        this.languageCode = languageCode;
+        this.patchType = patchType;
+        this.patchFlag = patchFlag;
+        this.patchOrder = patchOrder;
+
+        if (patchType == PatchType.OnFlag && string.IsNullOrEmpty(patchFlag))
+        {
+            ModLog.Error($"Missing flag for patch {patchName} that must be triggered by a specific flag!");
+            return;
+        }
+        else if (patchType == PatchType.OnFlag && !string.IsNullOrEmpty(patchFlag))
+        {
+            Main.LocalizationPatcher.EventHandler.OnFlagChange += OnFlagChange;
+        }
+    }
+
+    /// <summary>
+    /// load all terms from the raw string into <see cref="PatchTerm"/> objects
     /// </summary>
     /// <param name="rawText">Full text passed in by `FileHandler.LoadDataAsText`</param>
     public void LoadText(string rawText)
@@ -155,7 +197,7 @@ public class LanguagePatch
             // load key, operationType, and value into corresponding lists
             if (value != string.Empty)
             {
-                patchTerms.Add(new(key, value, operationType));
+                patchTerms.Add(new PatchTerm(key, value, operationType));
             }
             else
             {
