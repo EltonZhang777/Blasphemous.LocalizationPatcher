@@ -63,7 +63,7 @@ internal class LocalizationFramework : BlasMod
         {
             provider.RegisterCommand(command);
         }
-
+        
 #if DEBUG
         // load the debug test patch
         provider.RegisterLanguagePatch(_debugPatch);

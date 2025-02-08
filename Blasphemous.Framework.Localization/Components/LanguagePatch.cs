@@ -15,7 +15,6 @@ public class LanguagePatch
 {
     /// <summary>
     /// The patch name of the language file.
-    /// Patch name for language initialization files (containing all strings) is "base".
     /// </summary>
     public string patchName;
 
@@ -35,7 +34,7 @@ public class LanguagePatch
     public string parentModId;
 
     /// <summary>
-    /// A patch with smaller order number get patched first  
+    /// A patch with bigger order number get patched first  
     /// among other patches registered by the same mod.
     /// </summary>
     public int patchOrder = 0;
