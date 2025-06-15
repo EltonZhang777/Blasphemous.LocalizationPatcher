@@ -1,4 +1,4 @@
-﻿namespace Blasphemous.Framework.Localization.Events;
+﻿namespace Blasphemous.LocalizationPatcher.Events;
 
 internal class EventHandler
 {

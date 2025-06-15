@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 
-namespace Blasphemous.Framework.Localization;
+namespace Blasphemous.LocalizationPatcher;
 
 /// <summary>
-/// Master config class for LocalizationFramework mod
+/// Master config class for LocalizationPatcher mod
 /// </summary>
 public class Config
 {
@@ -26,4 +26,5 @@ public class Config
     /// List of patches disabled in the config file
     /// </summary>
     public List<string> disabledPatches = new();
+
 }

@@ -5,7 +5,7 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 
-namespace Blasphemous.Framework.Localization.Components;
+namespace Blasphemous.LocalizationPatcher.Components;
 
 
 /// <summary>
@@ -83,7 +83,7 @@ public class LanguagePatch
     /// <summary>
     /// The corresponding languageIndex of the CompiledLanguage object
     /// </summary>
-    internal int LanguageIndex => Main.LocalizationFramework.compiledLanguages.FindIndex(l => l.languageName == languageName);
+    internal int LanguageIndex => Main.LocalizationPatcher.compiledLanguages.FindIndex(l => l.languageName == languageName);
 
 
     /// <summary>
@@ -159,7 +159,7 @@ public class LanguagePatch
         }
         else if (patchType == PatchType.OnFlag && !string.IsNullOrEmpty(patchFlag))
         {
-            Main.LocalizationFramework.EventHandler.OnFlagChange += OnFlagChange;
+            Main.LocalizationPatcher.EventHandler.OnFlagChange += OnFlagChange;
         }
     }
 
@@ -232,18 +232,18 @@ public class LanguagePatch
 
         // find the corresponding CompiledLanguage object
         // if not found, create one
-        if (Main.LocalizationFramework.compiledLanguages.Find(l => l.languageName == languageName) == null)
+        if (Main.LocalizationPatcher.compiledLanguages.Find(l => l.languageName == languageName) == null)
         {
-            Main.LocalizationFramework.compiledLanguages.Add(new CompiledLanguage(languageName, languageCode));
+            Main.LocalizationPatcher.compiledLanguages.Add(new CompiledLanguage(languageName, languageCode));
         }
 
         // record this patch to the CompiledLanguage object
-        Main.LocalizationFramework.compiledLanguages[LanguageIndex].patchesApplied.Add(patchName);
+        Main.LocalizationPatcher.compiledLanguages[LanguageIndex].patchesApplied.Add(patchName);
 
         // compile each term patch to the CompiledLanguage object
         for (int i = 0; i < patchTerms.Count; i++)
         {
-            if (!Main.LocalizationFramework.compiledLanguages[LanguageIndex].TryUpdateTerm(patchTerms[i]))
+            if (!Main.LocalizationPatcher.compiledLanguages[LanguageIndex].TryUpdateTerm(patchTerms[i]))
             {
                 operationErrorCount++;
             }
@@ -277,6 +277,6 @@ public class LanguagePatch
             return;
 
         CompileText();
-        Main.LocalizationFramework.compiledLanguages[LanguageIndex].WriteAllTermsToGame();
+        Main.LocalizationPatcher.compiledLanguages[LanguageIndex].WriteAllTermsToGame();
     }
 }
