@@ -4,18 +4,18 @@
     <TargetFramework>net35</TargetFramework>
     <LangVersion>latest</LangVersion>
 
-    <Title>Localization Framework</Title>
-    <Product>Localization Framework</Product>
+    <Title>Localization Patcher</Title>
+    <Product>Localization Patcher</Product>
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
-    <Description>Allows other mods to customize vanilla localization texts of Blasphemous</Description>
-    <Version>2.0.0</Version>
+    <Description>Allows this mod and other mods to customize vanilla localization texts of Blasphemous</Description>
+    <Version>1.0.1</Version>
 
-    <TargetName>LocalizationFramework</TargetName>
+    <TargetName>LocalizationPatcher</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <DocumentationFile>bin\Release\$(TargetName).xml</DocumentationFile>
-    <RepositoryUrl>https://github.com/EltonZhang777/Blasphemous.Framework.Localization</RepositoryUrl>
+    <RepositoryUrl>https://github.com/EltonZhang777/Blasphemous.LocalizationPatcher</RepositoryUrl>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 

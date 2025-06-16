@@ -1,7 +1,7 @@
 ﻿using Blasphemous.CheatConsole;
-using Blasphemous.Framework.Localization.Commands;
-using Blasphemous.Framework.Localization.Components;
-using Blasphemous.Framework.Localization.Events;
+using Blasphemous.LocalizationPatcher.Commands;
+using Blasphemous.LocalizationPatcher.Components;
+using Blasphemous.LocalizationPatcher.Events;
 using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
@@ -9,12 +9,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Blasphemous.Framework.Localization;
+namespace Blasphemous.LocalizationPatcher;
 
 
-internal class LocalizationFramework : BlasMod
+internal class LocalizationPatcher : BlasMod
 {
-    internal LocalizationFramework() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
+    internal LocalizationPatcher() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
 
     internal List<CompiledLanguage> compiledLanguages = new();
 
@@ -63,7 +63,7 @@ internal class LocalizationFramework : BlasMod
         {
             provider.RegisterCommand(command);
         }
-
+        
 #if DEBUG
         // load the debug test patch
         provider.RegisterLanguagePatch(_debugPatch);

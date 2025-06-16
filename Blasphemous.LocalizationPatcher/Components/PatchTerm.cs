@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Blasphemous.Framework.Localization.Components;
+namespace Blasphemous.LocalizationPatcher.Components;
 
 /// <summary>
 /// A single term that records modification to localization string
