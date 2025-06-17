@@ -13,7 +13,7 @@ namespace Blasphemous.LocalizationPatcher.Components;
 public class PatchTerm
 {
     /// <summary>
-    /// Key of the term in the game's localization directory: <see cref="I2.Loc.LocalizationManager"/>
+    /// Key of the term in the game's localization directory: <see cref="I2LocManager"/>
     /// </summary>
     [JsonProperty]
     public string termKey;

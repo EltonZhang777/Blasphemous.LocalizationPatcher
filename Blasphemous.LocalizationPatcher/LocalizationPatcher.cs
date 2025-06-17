@@ -113,7 +113,7 @@ internal class LocalizationPatcher : BlasMod
         ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches from all mod registers");
 
         // store the language selected by the player in settings, so that it can be restored after patching completes
-        _selectedLangaugeInOptions = I2.Loc.LocalizationManager.CurrentLanguage;
+        _selectedLangaugeInOptions = I2LocManager.CurrentLanguage;
         ModLog.Info($"Stored current language selection: {_selectedLangaugeInOptions}");
 
         // Remove disabled languages in the game first
@@ -266,7 +266,7 @@ internal class LocalizationPatcher : BlasMod
         if (newLevel.Equals("MainMenu") && _firstMainMenuEnterFlag)
         {
             _firstMainMenuEnterFlag = false;
-            I2.Loc.LocalizationManager.CurrentLanguage = config.languageOnStartup;
+            I2LocManager.CurrentLanguage = config.languageOnStartup;
         }
 
     }
@@ -274,7 +274,7 @@ internal class LocalizationPatcher : BlasMod
     protected override void OnDispose()
     {
         // store current selected langauge to config for startup next time
-        config.languageOnStartup = I2.Loc.LocalizationManager.CurrentLanguage;
+        config.languageOnStartup = I2LocManager.CurrentLanguage;
         ConfigHandler.Save<Config>(config);
     }
 
@@ -294,7 +294,7 @@ internal class LocalizationPatcher : BlasMod
 
     internal static void AddLanguageToGame(string langName, string langCode)
     {
-        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             source.AddLanguage(langName, langCode);
         }
@@ -302,7 +302,7 @@ internal class LocalizationPatcher : BlasMod
 
     internal static void RemoveLanguageFromGame(string langName)
     {
-        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             source.RemoveLanguage(langName);
         }
@@ -310,7 +310,7 @@ internal class LocalizationPatcher : BlasMod
 
     internal static void GetAllLanguageNamesAndCodes(ref List<string> names, ref List<string> codes)
     {
-        LanguageSource source = I2.Loc.LocalizationManager.Sources[0];
+        LanguageSource source = I2LocManager.Sources[0];
         names = source.GetLanguages();
         codes = source.GetLanguagesCode();
     }

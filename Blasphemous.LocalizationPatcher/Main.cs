@@ -1,4 +1,7 @@
-﻿using BepInEx;
+﻿global using I2LocManager = I2.Loc.LocalizationManager;
+//global using BlasLocManager = Framework.Managers.LocalizationManager;
+
+using BepInEx;
 using System.Collections.Generic;
 using System.Linq;
 

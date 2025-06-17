@@ -131,7 +131,7 @@ public class CompiledLanguage
     {
         bool result = false;
 
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
             int index = termKeys.IndexOf(termKey);
@@ -162,7 +162,7 @@ public class CompiledLanguage
         // true => this term has keyError
         List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(false, keys.Count));
 
-        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             for (int i = 0; i < keys.Count; i++)
             {
@@ -254,7 +254,7 @@ public class CompiledLanguage
     {
         bool result = false;
 
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
             int index = termKeys.IndexOf(termKey);
@@ -277,7 +277,7 @@ public class CompiledLanguage
         for (int i = 0; i < termKeys.Count; i++)
         {
             bool success = false;
-            foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+            foreach (LanguageSource source in I2LocManager.Sources)
             {
                 success |= TryReadTermFromGame(termKeys[i]);
             }
@@ -295,7 +295,7 @@ public class CompiledLanguage
     /// </summary>
     internal void UpdateLanguageIndex()
     {
-        var source = LocalizationManager.Sources[0];
+        var source = I2LocManager.Sources[0];
         int index = source.GetLanguageIndex(languageName);
         if (index == -1)
         {
