@@ -8,6 +8,11 @@ namespace Blasphemous.LocalizationPatcher;
 public class Config
 {
     /// <summary>
+    /// Langauge chosen when the game starts.
+    /// </summary>
+    public string languageOnStartup = "";
+
+    /// <summary>
     /// List of all loaded languages' order in the game's settings.
     /// </summary>
     public List<string> languageOrder = new();

@@ -68,6 +68,7 @@ internal class LocalizationPatcher : BlasMod
         // load the debug test patch
         provider.RegisterLanguagePatch(_debugPatch);
 
+        // text-based import test
         provider.RegisterLanguagePatch(new LanguagePatch(
             "Debug_patch_addition_patch",
             "KeyDisplay",
@@ -97,13 +98,11 @@ internal class LocalizationPatcher : BlasMod
 
     protected override void OnAllInitialized()
     {
-
         ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches from all mod registers");
 
         // store the language selected by the player in settings, so that it can be restored after patching completes
         _selectedLangaugeInOptions = I2.Loc.LocalizationManager.CurrentLanguage;
         ModLog.Info($"Stored current language selection: {_selectedLangaugeInOptions}");
-
 
         // Remove disabled languages in the game first
         ModLog.Info($"Removing all disabled languages of vanilla game:");
@@ -145,7 +144,6 @@ internal class LocalizationPatcher : BlasMod
         {
             RemoveLanguageFromGame(langName);
         }
-
 
         // load in all registered language `.txt` patch files
         //   and construct their corresponding LanguagePatch objects.
@@ -245,27 +243,27 @@ internal class LocalizationPatcher : BlasMod
         }
 #endif
 
-        // Prepare to restore the selected language if it still exists
-        if (Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(_selectedLangaugeInOptions)))
+        // Determine language chosen on startup
+        // read config first, use config settings if the language is loaded
+        if (string.IsNullOrEmpty(config.languageOnStartup)
+            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(config.languageOnStartup)))
         {
-            I2.Loc.LocalizationManager.CurrentLanguage = _selectedLangaugeInOptions;
-            ModLog.Info($"Restoring selected language successful: {I2.Loc.LocalizationManager.CurrentLanguage}");
+            // if not set or does not exist, use the stored language in game settings
+            config.languageOnStartup = _selectedLangaugeInOptions;
+
+            if (string.IsNullOrEmpty(config.languageOnStartup)
+            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(config.languageOnStartup)))
+            {
+                // if language in settings does not exist, default to English
+                config.languageOnStartup = "English";
+            }
+            ModLog.Info($"No language on startup set in config, using language: {config.languageOnStartup}");
         }
         else
         {
-            ModLog.Warn($"{_selectedLangaugeInOptions} not found in localization directory. It might have been deleted by this mod");
-            if (!string.IsNullOrEmpty(I2.Loc.LocalizationManager.GetSupportedLanguage("English")))
-            {
-                ModLog.Info($"Restoring current language to English");
-                _selectedLangaugeInOptions = "English";
-                //UIController.instance.GetOptionsWidget().Option_AcceptGameOptions();
-                //ModLog.Info($"Current language: {I2.Loc.LocalizationManager.CurrentLanguage}");
-            }
-            else
-            {
-                ModLog.Warn($"Failed to restore current language to English.");
-            }
+            ModLog.Info($"Using language on startup from config: {config.languageOnStartup}");
         }
+        // actual language setting is done when loading main menu
 
         // final config save
         ConfigHandler.Save<Config>(config);
@@ -273,14 +271,21 @@ internal class LocalizationPatcher : BlasMod
 
     protected override void OnLevelLoaded(string oldLevel, string newLevel)
     {
-        // Restore langauge option to the user-selected langauge after initialization
-        if (!newLevel.Equals("MainMenu") || !_firstMainMenuEnterFlag)
-            return;
+        // Restore langauge option to the user-selected langauge after entering main menu for the first time
+        if (newLevel.Equals("MainMenu") && _firstMainMenuEnterFlag)
+        {
+            _firstMainMenuEnterFlag = false; 
+            I2.Loc.LocalizationManager.CurrentLanguage = config.languageOnStartup;
+        }
 
-        _firstMainMenuEnterFlag = false;
-        I2.Loc.LocalizationManager.CurrentLanguage = _selectedLangaugeInOptions;
     }
 
+    protected override void OnDispose()
+    {
+        // store current selected langauge to config for startup next time
+        config.languageOnStartup = I2.Loc.LocalizationManager.CurrentLanguage;
+        ConfigHandler.Save<Config>(config);
+    }
 
     internal static void AddLanguageToGame(string langName, string langCode)
     {
