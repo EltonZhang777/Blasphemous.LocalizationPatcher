@@ -9,7 +9,7 @@
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
     <Description>Allows this mod and other mods to customize vanilla localization texts of Blasphemous</Description>
-    <Version>1.0.1</Version>
+    <Version>2.0.1</Version>
 
     <TargetName>LocalizationPatcher</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>

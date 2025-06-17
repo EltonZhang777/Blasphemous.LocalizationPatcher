@@ -84,13 +84,9 @@ internal class LanguagePatchCommand : ModCommand
             return;
         }
 
-        int index = 0;
-        List<LanguagePatch> languagePatches = LanguagePatchRegister.Patches.ToList();
-        LanguagePatch targetPatch = languagePatches.First(x => x.patchName.Equals(parameters[0]));
-        index = languagePatches.IndexOf(targetPatch);
-        LanguagePatchRegister.AtIndex(index).CompileText();
-        index = languagePatches.First(x => x.patchName.Equals(parameters[0])).LanguageIndex;
-        Main.LocalizationPatcher.compiledLanguages[index].WriteAllTermsToGame();
+        LanguagePatch targetPatch = LanguagePatchRegister.AtName(parameters[0]);
+        targetPatch.CompileText();
+        targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
 
         Write($"Successfully applied patch {parameters[0]}!");
         Write($"Patches applied through commands are only active until exiting game process");

@@ -79,12 +79,15 @@ public class LanguagePatch
         Manually
     }
 
+    /// <summary>
+    /// Index of the corresponding CompiledLanguage object
+    /// </summary>
+    internal int CompiledLanguageIndex => Main.LocalizationPatcher.compiledLanguages.FindIndex(l => l.languageName == languageName);
 
     /// <summary>
     /// The corresponding languageIndex of the CompiledLanguage object
     /// </summary>
-    internal int LanguageIndex => Main.LocalizationPatcher.compiledLanguages.FindIndex(l => l.languageName == languageName);
-
+    internal CompiledLanguage CompiledLanguage => Main.LocalizationPatcher.compiledLanguages.Find(l => l.languageName == languageName);
 
     /// <summary>
     /// Pass in the `fullText` parameter by `FileHandler.LoadDataAsText`. 
@@ -234,16 +237,13 @@ public class LanguagePatch
         // if not found, create one
         if (Main.LocalizationPatcher.compiledLanguages.Find(l => l.languageName == languageName) == null)
         {
-            Main.LocalizationPatcher.compiledLanguages.Add(new CompiledLanguage(languageName, languageCode));
+            Main.LocalizationPatcher.RegisterCompiledLanguageObject(languageName, languageCode);
         }
-
-        // record this patch to the CompiledLanguage object
-        Main.LocalizationPatcher.compiledLanguages[LanguageIndex].patchesApplied.Add(patchName);
 
         // compile each term patch to the CompiledLanguage object
         for (int i = 0; i < patchTerms.Count; i++)
         {
-            if (!Main.LocalizationPatcher.compiledLanguages[LanguageIndex].TryUpdateTerm(patchTerms[i]))
+            if (!CompiledLanguage.TryUpdateTerm(patchTerms[i]))
             {
                 operationErrorCount++;
             }
@@ -263,6 +263,8 @@ public class LanguagePatch
             ModLog.Info($"Compiling process encountered no error.\n");
         }
 
+        // record this patch to the CompiledLanguage object and update applied status
+        CompiledLanguage.patchesApplied.Add(patchName);
         isApplied = true;
     }
 
@@ -277,6 +279,6 @@ public class LanguagePatch
             return;
 
         CompileText();
-        Main.LocalizationPatcher.compiledLanguages[LanguageIndex].WriteAllTermsToGame();
+        CompiledLanguage.WriteAllTermsToGame();
     }
 }

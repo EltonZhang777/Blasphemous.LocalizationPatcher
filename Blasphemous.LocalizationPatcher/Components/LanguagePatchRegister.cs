@@ -12,8 +12,20 @@ public static class LanguagePatchRegister
 
     private static readonly List<LanguagePatch> _patches = new();
     internal static IEnumerable<LanguagePatch> Patches => _patches;
-    internal static LanguagePatch AtIndex(int index) => _patches[index];
     internal static int Total => _patches.Count;
+    internal static LanguagePatch AtIndex(int index) => _patches[index];
+    internal static LanguagePatch AtName(string name)
+    {
+        try
+        {
+            return _patches.First(x => x.patchName == name);
+        }
+        catch
+        {
+            ModLog.Warn($"Queried nonexistent patch `{name}`");
+            return null;
+        }
+    }
 
     /// <summary>
     /// Registers a new LanguagePatch 
