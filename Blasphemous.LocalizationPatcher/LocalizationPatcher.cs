@@ -2,6 +2,7 @@
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
+using Blasphemous.LocalizationPatcher.Extensions;
 using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
@@ -33,6 +34,32 @@ internal class LocalizationPatcher : BlasMod
         "Portuguese (Brazil)",
         "Korean"
         ];
+    internal static readonly Dictionary<string, string> vanillaRegularFontNames = new()
+    {
+        { "Spanish", "MajesticExtended_Pixel_Scroll" },
+        { "English", "MajesticExtended_Pixel_Scroll" },
+        { "French", "MajesticExtended_Pixel_Scroll" },
+        { "German", "MajesticExtended_German" },
+        { "Italian", "MajesticExtended_Pixel_Scroll" },
+        { "Chinese", "MSJhengHei-cut" },
+        { "Russian", "RussianFont_Basis33" },
+        { "Japanese", "KH-Dot-Ningyouchou-16-cut" },
+        { "Portuguese (Brazil)", "MajesticExtended_Pixel_Scroll" },
+        { "Korean", "NeoDunggeunmo_korean_cut"}
+    };
+    internal static readonly Dictionary<string, string> vanillaTmpFontNames = new()
+    {
+        { "Spanish", "MajesticExtended_FullLatin" },
+        { "English", "MajesticExtended_FullLatin" },
+        { "French", "MajesticExtended_FullLatin" },
+        { "German", "MajesticExtended_GermanPro" },
+        { "Italian", "MajesticExtended_FullLatin" },
+        { "Chinese", "MSJhengHei-cutPro" },
+        { "Russian", "RussianFont_Basis33_exported" },
+        { "Japanese", "KH-Dot-Ningyouchou-16-cutPro" },
+        { "Portuguese (Brazil)", "MajesticExtended_FullLatin" },
+        { "Korean", "NeoDunggeunmo_korean_cutPro"}
+    };
 
     private readonly string _debugPatchFileName = "Debug_patch_localization_key_display.json";
     private LanguagePatch _debugPatch;
@@ -69,7 +96,8 @@ internal class LocalizationPatcher : BlasMod
         // register commands
         List<ModCommand> commands =
             [
-            new LanguagePatchCommand()
+            new LanguagePatchCommand(),
+            new ModFontCommand(),
             ];
         foreach (ModCommand command in commands)
         {
@@ -77,36 +105,13 @@ internal class LocalizationPatcher : BlasMod
         }
 
 #if DEBUG
-        // load the debug test patch
+        // load debug test patch
         provider.RegisterLanguagePatch(_debugPatch);
 
-        // text-based import test
-        provider.RegisterLanguagePatch(new LanguagePatch(
-            "Debug_patch_addition_patch",
-            "KeyDisplay",
-            "kd",
-            "UI_Map/LABEL_MENU_LANGUAGENAME -> AppendAtBeginning : test_",
-            LanguagePatch.PatchType.Manually));
-
-        // (de)serialization test
-        /*
-        ModLog.Info($"Start serializing LanguagePatch");
-        File.WriteAllText(
-            FileHandler.ContentFolder + @"test_patch.json",
-            JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
-
-        ModLog.Info($"Start deserializing to LanguagePatch");
-        LanguagePatch deserializedPatch = JsonConvert.DeserializeObject<LanguagePatch>(
-            JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
-        string reserializedJson = JsonConvert.SerializeObject(deserializedPatch, Formatting.Indented);
-        File.WriteAllText(
-            FileHandler.ContentFolder + @"reserialized_patch.json",
-            reserializedJson);
-        ModLog.Info($"json equal after reserialization? {reserializedJson.Equals(JsonConvert.SerializeObject(debugPatch, Formatting.Indented))}");
-        */
+        // load debug font
+        provider.RegisterModFont(new ModFont(FileHandler, "vonwaonbitmap-12px.json"));
 #endif
     }
-
 
     protected override void OnAllInitialized()
     {
@@ -233,6 +238,12 @@ internal class LocalizationPatcher : BlasMod
             }
         }
 #endif
+
+        // Hook all ModFont objects to CompiledLanguage objects
+        foreach (ModFont modFont in ModFontRegister.ModFonts)
+        {
+            modFont.AttachFontToLangauges();
+        }
 
         // Determine language chosen on startup
         // read config first, use config settings if the language is loaded

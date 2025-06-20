@@ -45,7 +45,14 @@ public class CompiledLanguage
     /// </summary>
     public List<string> patchesApplied = new();
 
+    /// <summary>
+    /// All mod fonts that are applicable to this language
+    /// </summary>
+    public List<ModFont> modFonts = new();
+
     private int _languageIndex = -1;
+
+    internal bool IsVanillaLanguage => LocalizationPatcher.IsVanillaLanguage(languageName);
 
     /// <summary>
     /// Constructor of the CompiledLanguage class. 
@@ -235,7 +242,7 @@ public class CompiledLanguage
     /// </summary>
     public void WriteAllTermsToGame(bool forceWriteAll = false)
     {
-        if (!IsVanillaLanguage() || forceWriteAll) // if this is not a vanilla language, all terms must be written; if forceWriteAll is true, all terms must be written regardless of the language type
+        if (!IsVanillaLanguage || forceWriteAll) // if this is not a vanilla language or forceWriteAll is true, all terms must be written.
         {
             WriteTermsToGame(termKeys);
         }
@@ -290,6 +297,68 @@ public class CompiledLanguage
     }
 
     /// <summary>
+    /// Apply the specified font to this language
+    /// </summary>
+    public void ApplyFontToGame(ModFont modFont)
+    {
+        if (!modFonts.Contains(modFont))
+            return;
+
+        // if modded fonts not found, use vanilla fonts
+        string regularFontUsed;
+        if (modFont.regularFont != null)
+        {
+            regularFontUsed = modFont.RegularAssetName;
+        }
+        else if (IsVanillaLanguage)
+        {
+            regularFontUsed = LocalizationPatcher.vanillaRegularFontNames[languageName];
+            ModLog.Error($"Modded regular font `{modFont}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
+        }
+        else
+        {
+            regularFontUsed = "MajesticExtended_Pixel_Scroll";
+            ModLog.Error($"No default font found for language {languageName}, using default English font `{regularFontUsed}`.");
+        }
+
+        string tmpFontUsed;
+        if (modFont.tmpFont != null)
+        {
+            tmpFontUsed = modFont.TmpAssetName;
+        }
+        else if (IsVanillaLanguage)
+        {
+            tmpFontUsed = LocalizationPatcher.vanillaTmpFontNames[languageName];
+            ModLog.Error($"Modded TextMeshPro font `{modFont}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
+        }
+        else
+        {
+            tmpFontUsed = "MajesticExtended_FullLatin";
+            ModLog.Error($"No default font found for language {languageName}, using default English font `{tmpFontUsed}`.");
+        }
+
+        // update the fonts to I2.Loc manager
+        TryUpdateTerm("UI/FONT", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm("UI/FONT_SCROLL", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm("UI/FONT_TEXTMESH_PRO", tmpFontUsed, PatchTerm.TermOperation.ReplaceAll);
+
+        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
+
+        // force localize the language in I2.Loc to apply the font
+        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+    }
+
+    /// <summary>
+    /// Get the fonts currently used by this language
+    /// </summary>
+    public void GetCurrentFonts(out string regularFontUsed, out string tmpFontUsed)
+    {
+        // get the current fonts used in I2.Loc
+        regularFontUsed = I2LocManager.GetTermData("UI/FONT").Languages[_languageIndex];
+        tmpFontUsed = I2LocManager.GetTermData("UI/FONT_TEXTMESH_PRO").Languages[_languageIndex];
+    }
+
+    /// <summary>
     /// Updates the index of the langauge in the LocalizationManager to this object, 
     /// or register a new language if the specified langauge is not found.
     /// </summary>
@@ -310,10 +379,5 @@ public class CompiledLanguage
         int termIndex = termKeys.IndexOf(termKey);
         termPrefixes[termIndex] = string.Empty;
         termSuffixes[termIndex] = string.Empty;
-    }
-
-    internal bool IsVanillaLanguage()
-    {
-        return LocalizationPatcher.IsVanillaLanguage(languageName);
     }
 }

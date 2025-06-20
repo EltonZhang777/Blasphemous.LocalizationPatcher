@@ -78,12 +78,14 @@ internal class LanguagePatchCommand : ModCommand
         if (!ValidateParameterList(parameters, 1))
             return;
 
+        // validate the specified patch's existence
         if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(parameters[0])))
         {
             Write($"Patch `{parameters[0]}` not found!");
             return;
         }
 
+        // apply the patch to the specified language
         LanguagePatch targetPatch = LanguagePatchRegister.AtName(parameters[0]);
         targetPatch.CompileText();
         targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
