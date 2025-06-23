@@ -45,11 +45,10 @@ public class CompiledLanguage
     /// </summary>
     public List<string> patchesApplied = new();
 
-    private int languageIndex = -1;
+    private int _languageIndex = -1;
 
     /// <summary>
     /// Constructor of the CompiledLanguage class. 
-    /// Automatically registers the langauge to game if not found.
     /// </summary>
     /// <param name="langName"> name of the language </param>
     /// <param name="langCode"> language code of the language </param>
@@ -132,7 +131,7 @@ public class CompiledLanguage
     {
         bool result = false;
 
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
             int index = termKeys.IndexOf(termKey);
@@ -140,7 +139,7 @@ public class CompiledLanguage
             {
                 result = true;
                 string termText = termPrefixes[index] + termContents[index] + termSuffixes[index];
-                source.GetTermData(termKey).Languages[languageIndex] = termText;
+                source.GetTermData(termKey).Languages[_languageIndex] = termText;
             }
         }
 
@@ -148,25 +147,28 @@ public class CompiledLanguage
     }
 
     /// <summary>
-    /// load all the terms of CompiledLanguage object into Blasphemous
+    /// Write selected terms of CompiledLanguage object into Blasphemous
     /// </summary>
-    public void WriteAllTermsToGame()
+    public void WriteTermsToGame(List<string> keys)
     {
-        GetAndUpdateLanguageIndex();
+        UpdateLanguageIndex();
+        if (keys.Count == 0)
+            return;
+
         int successfulCount = 0;
         int keyErrorCount = 0;
 
         // documenting whether a term isn't patched till the end due to its key being nonexistent.
         // true => this term has keyError
-        List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(true, termKeys.Count));
+        List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(false, keys.Count));
 
-        foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
-            for (int i = 0; i < termKeys.Count; i++)
+            for (int i = 0; i < keys.Count; i++)
             {
-                if (TryWriteTermToGame(termKeys[i]))
+                if (!TryWriteTermToGame(keys[i]))
                 {
-                    keyErrorFlags[i] = false;
+                    keyErrorFlags[i] = true;
                 }
             }
         }
@@ -176,7 +178,7 @@ public class CompiledLanguage
         {
             if (keyErrorFlags[i] == true)
             {
-                ModLog.Warn($"term key {termKeys[i]} not found in Blasphemous localization directory, " +
+                ModLog.Warn($"term key {keys[i]} not found in Blasphemous localization directory, " +
                     $"skipping this term.");
                 keyErrorCount++;
             }
@@ -185,7 +187,7 @@ public class CompiledLanguage
                 successfulCount++;
             }
         }
-        ModLog.Info($"Successfully updated {successfulCount} of {termKeys.Count} terms of {languageName} into the game");
+        ModLog.Info($"Successfully updated {successfulCount} of {keys.Count} terms of {languageName} into the game");
         if (keyErrorCount > 0)
         {
             ModLog.Warn($"Skipped {keyErrorCount} terms with invalid keys.\n");
@@ -193,6 +195,53 @@ public class CompiledLanguage
         else
         {
             ModLog.Info($"Update process encountered no error.\n");
+        }
+    }
+
+    /// <summary>
+    /// Write all terms which are modified by specific patch to game
+    /// </summary>
+    /// <param name="patchName"></param>
+    public void WritePatchToGame(string patchName)
+    {
+        if (!patchesApplied.Contains(patchName))
+        {
+            ModLog.Warn($"Failed attempting to write unapplied patch `{patchName}` to game!");
+            return;
+        }
+
+        WriteTermsToGame(LanguagePatchRegister.AtName(patchName).patchTerms.Select(x => x.termKey).ToList());
+    }
+
+    /// <summary>
+    /// Optimized implementation to write all patched terms to game
+    /// </summary>
+    public void WriteAllPatchesToGame()
+    {
+        // collect all modified term keys from all patches applied to this language
+        List<string> allModifiedTermKeys = new();
+        foreach (string patchName in patchesApplied)
+        {
+            allModifiedTermKeys.AddRange(LanguagePatchRegister.AtName(patchName).patchTerms.Select(x => x.termKey));
+        }
+        allModifiedTermKeys = allModifiedTermKeys.Distinct().ToList();
+
+        // write only those terms to the game
+        WriteTermsToGame(allModifiedTermKeys);
+    }
+
+    /// <summary>
+    /// Optimized implementation to write all terms of this CompiledLanguage object to game's localization
+    /// </summary>
+    public void WriteAllTermsToGame(bool forceWriteAll = false)
+    {
+        if (!IsVanillaLanguage() || forceWriteAll) // if this is not a vanilla language, all terms must be written; if forceWriteAll is true, all terms must be written regardless of the language type
+        {
+            WriteTermsToGame(termKeys);
+        }
+        else // for vanilla languages, only write terms that are patched
+        {
+            WriteAllPatchesToGame();
         }
     }
 
@@ -205,13 +254,13 @@ public class CompiledLanguage
     {
         bool result = false;
 
-        foreach (LanguageSource source in LocalizationManager.Sources)
+        foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
             int index = termKeys.IndexOf(termKey);
             if (allAvailableTerms.Contains(termKey))
             {
-                termContents[index] = source.GetTermData(termKey).Languages[languageIndex];
+                termContents[index] = source.GetTermData(termKey).Languages[_languageIndex];
                 result = true;
             }
         }
@@ -224,11 +273,11 @@ public class CompiledLanguage
     /// </summary>
     public void ReadAllTermsFromGame()
     {
-        GetAndUpdateLanguageIndex();
+        UpdateLanguageIndex();
         for (int i = 0; i < termKeys.Count; i++)
         {
             bool success = false;
-            foreach (LanguageSource source in I2.Loc.LocalizationManager.Sources)
+            foreach (LanguageSource source in I2LocManager.Sources)
             {
                 success |= TryReadTermFromGame(termKeys[i]);
             }
@@ -244,16 +293,16 @@ public class CompiledLanguage
     /// Updates the index of the langauge in the LocalizationManager to this object, 
     /// or register a new language if the specified langauge is not found.
     /// </summary>
-    internal void GetAndUpdateLanguageIndex()
+    internal void UpdateLanguageIndex()
     {
-        var source = LocalizationManager.Sources[0];
+        var source = I2LocManager.Sources[0];
         int index = source.GetLanguageIndex(languageName);
         if (index == -1)
         {
             LocalizationPatcher.AddLanguageToGame(languageName, languageCode);
             index = source.GetLanguageIndex(languageName);
         }
-        languageIndex = index;
+        _languageIndex = index;
     }
 
     internal void RemovePrefixAndSuffix(string termKey)
@@ -261,5 +310,10 @@ public class CompiledLanguage
         int termIndex = termKeys.IndexOf(termKey);
         termPrefixes[termIndex] = string.Empty;
         termSuffixes[termIndex] = string.Empty;
+    }
+
+    internal bool IsVanillaLanguage()
+    {
+        return LocalizationPatcher.IsVanillaLanguage(languageName);
     }
 }

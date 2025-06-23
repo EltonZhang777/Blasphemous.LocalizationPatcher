@@ -13,7 +13,7 @@ namespace Blasphemous.LocalizationPatcher.Components;
 public class PatchTerm
 {
     /// <summary>
-    /// Key of the term in the game's localization directory: <see cref="I2.Loc.LocalizationManager"/>
+    /// Key of the term in the game's localization directory: <see cref="I2LocManager"/>
     /// </summary>
     [JsonProperty]
     public string termKey;
@@ -57,7 +57,7 @@ public class PatchTerm
         Suffix
     }
 
-    private static Dictionary<TermOperation, List<string>> termOperationParseDict = new()
+    private static readonly Dictionary<TermOperation, List<string>> _termOperationParseDict = new()
     {
         { TermOperation.Replace, ["Replace"] },
         { TermOperation.ReplaceAll, ["ReplaceAll"] },
@@ -101,6 +101,7 @@ public class PatchTerm
         }
         catch
         {
+            ModLog.Error($"Invalid term operation `{termOperation}` for term `{termKey}`!");
             this.termKey = "";
             this.termContent = "";
             this.termOperation = TermOperation.Prefix;
@@ -112,7 +113,7 @@ public class PatchTerm
     /// </summary>
     public static TermOperation ParseToTermOperation(string input, bool ignoreCase = false)
     {
-        foreach (var kvp in termOperationParseDict)
+        foreach (var kvp in _termOperationParseDict)
         {
             if (!ignoreCase)
             {
