@@ -2,6 +2,7 @@
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
 using System.Linq;
+using System.Text;
 using TMPro;
 using UnityEngine;
 
@@ -51,15 +52,17 @@ public class ModFont
             throw new System.ArgumentException(errMsg);
         }
 
-        UnityEngine.Object[] assets;
+        UObject[] assets;
 #if DEBUG
         assets = ab.LoadAllAssets();
-        ModLog.Warn($"All assets: ");
-        foreach (UnityEngine.Object asset in assets)
+        StringBuilder sb = new();
+        sb.AppendLine($"All assets: ");
+        foreach (UObject asset in assets)
         {
-            ModLog.Warn($"  `{asset.name}`");
+            sb.AppendLine($"  `{asset.name}`");
         }
-        ModLog.Warn($"\n");
+        sb.AppendLine();
+        Main.LogIfDebug(sb.ToString());
 #endif
 
         // load regular asset
@@ -67,10 +70,8 @@ public class ModFont
         ModLog.Warn($"assets.Length: {assets.Length}");
         if (assets.Length == 1)
         {
-            UnityEngine.Object asset = assets[0];
-#if DEBUG
-            ModLog.Warn($"acquired regular font asset {asset.name}");
-#endif
+            UObject asset = assets[0];
+            Main.LogIfDebug($"acquired regular font asset {asset.name}");
             regularFont = asset as Font;
             regularFont.name = RegularAssetName;
         }
@@ -80,10 +81,8 @@ public class ModFont
         ModLog.Warn($"assets.Length: {assets.Length}");
         if (assets.Length == 1)
         {
-            UnityEngine.Object asset = assets[0];
-#if DEBUG
-            ModLog.Warn($"acquired tmp font asset {asset.name}");
-#endif
+            UObject asset = assets[0];
+            Main.LogIfDebug($"acquired tmp font asset {asset.name}");
             tmpFont = asset as TMP_FontAsset;
             tmpFont.name = TmpAssetName;
         }

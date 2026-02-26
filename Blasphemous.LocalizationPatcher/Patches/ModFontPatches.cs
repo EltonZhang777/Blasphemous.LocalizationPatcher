@@ -1,5 +1,4 @@
 ﻿using Blasphemous.LocalizationPatcher.Components;
-using Blasphemous.ModdingAPI;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -14,11 +13,9 @@ namespace Blasphemous.LocalizationPatcher.Patches;
 class LocalizationManager_FindAsset_RetrieveModAsset_Patch
 {
 
-    public static bool Prefix(string value, ref UnityEngine.Object __result)
+    public static bool Prefix(string value, ref UObject __result)
     {
-#if DEBUG
-        ModLog.Warn($"LocalizationManager.FindAsset({value})");
-#endif
+        Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
         List<ModFont> matchingModFonts = new();
 
         // check if I2.Loc is querying for a tmp font asset of a mod font

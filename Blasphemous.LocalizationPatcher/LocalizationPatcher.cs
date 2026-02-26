@@ -8,6 +8,7 @@ using I2.Loc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Blasphemous.LocalizationPatcher;
 
@@ -58,7 +59,6 @@ internal class LocalizationPatcher : BlasMod
         { "Portuguese (Brazil)", "MajesticExtended_FullLatin" },
         { "Korean", "NeoDunggeunmo_korean_cutPro"}
     };
-
     private readonly string _debugPatchFileName = "Debug_patch_localization_key_display.json";
     private LanguagePatch _debugPatch;
     private bool _firstMainMenuEnterFlag = true;
@@ -221,20 +221,22 @@ internal class LocalizationPatcher : BlasMod
 #if DEBUG
         // display all current languages into log
         GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
-        ModLog.Info($"Final summary of all loaded languages:");
+        StringBuilder sb = new();
+        sb.AppendLine($"Final summary of all loaded languages:");
         int numCurrentLanguages = allLanguageNames.Count;
         for (int i = 0; i < numCurrentLanguages; i++)
         {
-            ModLog.Info($"\nlanguage #{i + 1} : \n" +
-                $"language name: {allLanguageNames[i]}\n" +
-                $"language code: {allLanguageCodes[i]}");
+            sb.AppendLine($"  Language #{i + 1} :");
+            sb.AppendLine($"    language name: {allLanguageNames[i]}");
+            sb.AppendLine($"    language code: {allLanguageCodes[i]}");
             int currentPatchCount = 0;
             foreach (string patchName in compiledLanguages.Find(l => l.languageName == allLanguageNames[i]).patchesApplied)
             {
                 currentPatchCount++;
-                ModLog.Info($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
+                sb.AppendLine($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
             }
         }
+        Main.LogIfDebug(sb.ToString());
 #endif
 
         // Hook all ModFont objects to CompiledLanguage objects
