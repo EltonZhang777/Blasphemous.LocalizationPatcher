@@ -167,7 +167,7 @@ public class CompiledLanguage
 
         // documenting whether a term isn't patched till the end due to its key being nonexistent.
         // true => this term has keyError
-        List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(false, keys.Count));
+        List<bool> keyErrorFlags = new(Enumerable.Repeat(false, keys.Count));
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
@@ -364,7 +364,7 @@ public class CompiledLanguage
     /// </summary>
     internal void UpdateLanguageIndex()
     {
-        var source = I2LocManager.Sources[0];
+        LanguageSource source = I2LocManager.Sources[0];
         int index = source.GetLanguageIndex(languageName);
         if (index == -1)
         {

@@ -31,13 +31,13 @@ internal static class FileHandlerExtensions
 
     internal static bool LoadContentAsJson<T>(this FileHandler fileHandler, string fileName, out T output)
     {
-        if (ReadFileContents(fileHandler, fileHandler.ContentFolder + fileName, out var output2))
+        if (ReadFileContents(fileHandler, fileHandler.ContentFolder + fileName, out string output2))
         {
             output = JsonConvert.DeserializeObject<T>(output2);
             return true;
         }
 
-        output = default(T);
+        output = default;
         return false;
     }
 

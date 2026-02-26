@@ -38,7 +38,6 @@ internal class LanguagePatchCommand : ModCommand
         Write($"{CommandName} export [patchName]: export the specified language patch to `Modding/content/{Main.LocalizationPatcher.Name}/[patchName].json`");
     }
 
-
     private void SubCommand_List(string[] parameters)
     {
         if (!ValidateParameterList(parameters, [0, 1]))

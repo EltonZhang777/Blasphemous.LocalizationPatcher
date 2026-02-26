@@ -35,7 +35,6 @@ internal class ModFontCommand : ModCommand
         Write($"{CommandName} apply [fontName] [languageName]: apply the specified font to the speicified language");
     }
 
-
     private void SubCommand_List(string[] parameters)
     {
         if (!ValidateParameterList(parameters, [0, 1, 2]))

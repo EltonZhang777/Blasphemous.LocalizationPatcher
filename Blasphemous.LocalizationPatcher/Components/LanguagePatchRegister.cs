@@ -76,7 +76,7 @@ public static class LanguagePatchRegister
         // xModIndex == yModIndex
         // Mod order same, compare order within same mod
         // patch with bigger patch order is registered first
-        return (x.patchOrder.CompareTo(y.patchOrder)) * -1;
+        return x.patchOrder.CompareTo(y.patchOrder) * -1;
     }
 }
 

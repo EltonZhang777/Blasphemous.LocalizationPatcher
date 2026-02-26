@@ -7,7 +7,6 @@ using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
-
 /// <summary>
 /// contains the basic information of a localization patch
 /// </summary>

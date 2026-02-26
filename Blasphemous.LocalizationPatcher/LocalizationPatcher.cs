@@ -2,7 +2,6 @@
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
-using Blasphemous.LocalizationPatcher.Extensions;
 using Blasphemous.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
@@ -11,7 +10,6 @@ using System.IO;
 using System.Linq;
 
 namespace Blasphemous.LocalizationPatcher;
-
 
 internal class LocalizationPatcher : BlasMod
 {
@@ -279,7 +277,6 @@ internal class LocalizationPatcher : BlasMod
             _firstMainMenuEnterFlag = false;
             I2LocManager.CurrentLanguage = config.languageOnStartup;
         }
-
     }
 
     protected override void OnDispose()
@@ -330,7 +327,5 @@ internal class LocalizationPatcher : BlasMod
     {
         return vanillaLanguageNames.Contains(langName);
     }
-
 }
-
 

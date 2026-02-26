@@ -3,7 +3,6 @@ using HarmonyLib;
 
 namespace Blasphemous.LocalizationPatcher.Events;
 
-
 [HarmonyPatch(typeof(EventManager), "SetFlag")]
 internal class EventManager_SetFlag_FlagChangeEvent_Patch
 {
