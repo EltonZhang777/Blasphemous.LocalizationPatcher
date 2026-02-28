@@ -15,7 +15,7 @@ class LocalizationManager_FindAsset_RetrieveModAsset_Patch
 
     public static bool Prefix(string value, ref UObject __result)
     {
-        Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
+        //Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
         List<ModFont> matchingModFonts = new();
 
         // check if I2.Loc is querying for a tmp font asset of a mod font

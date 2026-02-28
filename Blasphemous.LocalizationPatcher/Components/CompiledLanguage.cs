@@ -313,7 +313,7 @@ public class CompiledLanguage
         else if (IsVanillaLanguage)
         {
             regularFontUsed = LocalizationPatcher.vanillaRegularFontNames[languageName];
-            ModLog.Error($"Modded regular font `{modFont}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
+            ModLog.Error($"Modded regular font `{modFont?.RegularAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
         }
         else
         {
@@ -329,7 +329,7 @@ public class CompiledLanguage
         else if (IsVanillaLanguage)
         {
             tmpFontUsed = LocalizationPatcher.vanillaTmpFontNames[languageName];
-            ModLog.Error($"Modded TextMeshPro font `{modFont}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
+            ModLog.Error($"Modded TextMeshPro font `{modFont?.TmpAssetName}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
         }
         else
         {

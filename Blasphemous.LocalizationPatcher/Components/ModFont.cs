@@ -59,7 +59,7 @@ public class ModFont
         sb.AppendLine($"All assets: ");
         foreach (UObject asset in assets)
         {
-            sb.AppendLine($"  `{asset.name}`");
+            sb.AppendLine($"  asset name: `{asset.name}`; asset type: `{asset.GetType()}`");
         }
         sb.AppendLine();
         Main.LogIfDebug(sb.ToString());
