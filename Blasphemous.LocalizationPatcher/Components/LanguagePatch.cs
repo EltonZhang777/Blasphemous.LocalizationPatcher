@@ -53,7 +53,7 @@ public class LanguagePatch
     /// All the patch terms of this patch
     /// </summary>
     [JsonProperty]
-    public List<PatchTerm> patchTerms = new();
+    public List<PatchTerm> patchTerms = [];
 
     internal bool isApplied = false;
 

@@ -17,9 +17,9 @@ internal class LocalizationPatcher : BlasMod
     /// <summary>
     /// all terms keys in Blasphemous' localization service `I2.Loc`.
     /// </summary>
-    internal List<string> allPossibleKeys = new();
+    internal List<string> allPossibleKeys = [];
 
-    internal List<CompiledLanguage> compiledLanguages = new();
+    internal List<CompiledLanguage> compiledLanguages = [];
     internal static readonly List<string> vanillaLanguageNames =
         [
         "Spanish",
@@ -142,8 +142,8 @@ internal class LocalizationPatcher : BlasMod
         ModLog.Info($"Successfully removed {removedLanguageCount} languages from game.");
 
         // Create CompiledLanguage objects of remaining vanilla languages
-        List<string> allLanguageNames = new();
-        List<string> allLanguageCodes = new();
+        List<string> allLanguageNames = [];
+        List<string> allLanguageCodes = [];
         GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
         foreach (string langName in allLanguageNames)
         {

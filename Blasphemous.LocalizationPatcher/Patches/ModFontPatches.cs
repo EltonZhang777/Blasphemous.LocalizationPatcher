@@ -2,7 +2,6 @@
 using Blasphemous.LocalizationPatcher.Extensions;
 using HarmonyLib;
 using I2.Loc;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -21,7 +20,7 @@ internal class LocalizationManager_RetrieveModAsset_Patch
     public static bool Prefix(string value, ref UObject __result)
     {
         //Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
-        List<ModFont> matchingModFonts = new();
+        List<ModFont> matchingModFonts = [];
 
         // check if I2.Loc is querying for a tmp font asset of a mod font
         matchingModFonts = ModFontRegister.ModFonts.ToList().Where(x => x.TmpAssetName == value).ToList();
@@ -62,14 +61,12 @@ internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
     [HarmonyPostfix]
     public static void UseModFontMaterial(
         LocalizeTarget_UnityUI_Text __instance,
-        Localize cmp, 
-        string mainTranslation, 
+        Localize cmp,
+        string mainTranslation,
         string secondaryTranslation)
     {
         Text target = __instance.GetTarget(cmp);
         Font secondaryTranslatedObj = cmp.DoGetSecondaryTranslatedObj<Font>(ref mainTranslation, ref secondaryTranslation);
-        Main.LogIfDebug($"text target exists?: {target != null}, name: {target?.name}");
-        Main.LogIfDebug($"font secondaryTranslatedObj exists?: {secondaryTranslatedObj != null}, name: {secondaryTranslatedObj?.name}");
         // if vanilla game doesn't specify `secondaryTranslatedObj`, return early.
         if ((secondaryTranslatedObj == null) || (target == null))
         {
@@ -78,7 +75,7 @@ internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
 
         // check if the font is modded font, if not, return early.
         ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.RegularAssetName == secondaryTranslatedObj.name);
-        if ((modFont == null))
+        if (modFont == null)
         {
             return;
         }

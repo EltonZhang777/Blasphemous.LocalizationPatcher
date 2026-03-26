@@ -10,7 +10,7 @@ namespace Blasphemous.LocalizationPatcher.Components;
 public static class LanguagePatchRegister
 {
 
-    private static readonly List<LanguagePatch> _patches = new();
+    private static readonly List<LanguagePatch> _patches = [];
     internal static IEnumerable<LanguagePatch> Patches => _patches;
     internal static int Total => _patches.Count;
     internal static LanguagePatch AtIndex(int index) => _patches[index];

@@ -9,7 +9,7 @@ namespace Blasphemous.LocalizationPatcher.Components;
 /// </summary>
 public static class ModFontRegister
 {
-    private static readonly List<ModFont> _modFonts = new();
+    private static readonly List<ModFont> _modFonts = [];
     internal static IEnumerable<ModFont> ModFonts => _modFonts;
     internal static int Total => _modFonts.Count;
     internal static ModFont AtIndex(int index) => _modFonts[index];

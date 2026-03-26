@@ -23,32 +23,32 @@ public class CompiledLanguage
     /// <summary>
     /// All the term keys of the language terms.
     /// </summary>
-    public List<string> termKeys = new();
+    public List<string> termKeys = [];
 
     /// <summary>
     /// All the prefixes of term contents of the language terms.
     /// </summary>
-    public List<string> termPrefixes = new();
+    public List<string> termPrefixes = [];
 
     /// <summary>
     /// All the central term contents of the language terms.
     /// </summary>
-    public List<string> termContents = new();
+    public List<string> termContents = [];
 
     /// <summary>
     /// All the suffixes of term contents of the language terms.
     /// </summary>
-    public List<string> termSuffixes = new();
+    public List<string> termSuffixes = [];
 
     /// <summary>
     /// All patches that are applied to this language, in chronological order
     /// </summary>
-    public List<string> patchesApplied = new();
+    public List<string> patchesApplied = [];
 
     /// <summary>
     /// All mod fonts that are applicable to this language
     /// </summary>
-    public List<ModFont> modFonts = new();
+    public List<ModFont> modFonts = [];
 
     private int _languageIndex = -1;
 
@@ -66,9 +66,9 @@ public class CompiledLanguage
 
         termKeys = Main.LocalizationPatcher.allPossibleKeys;
         int keyCount = termKeys.Count;
-        termPrefixes = new(Enumerable.Repeat(string.Empty, keyCount));
-        termContents = new(Enumerable.Repeat(string.Empty, keyCount));
-        termSuffixes = new(Enumerable.Repeat(string.Empty, keyCount));
+        termPrefixes = [.. Enumerable.Repeat(string.Empty, keyCount)];
+        termContents = [.. Enumerable.Repeat(string.Empty, keyCount)];
+        termSuffixes = [.. Enumerable.Repeat(string.Empty, keyCount)];
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ public class CompiledLanguage
 
         // documenting whether a term isn't patched till the end due to its key being nonexistent.
         // true => this term has keyError
-        List<bool> keyErrorFlags = new(Enumerable.Repeat(false, keys.Count));
+        List<bool> keyErrorFlags = [.. Enumerable.Repeat(false, keys.Count)];
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
@@ -226,7 +226,7 @@ public class CompiledLanguage
     public void WriteAllPatchesToGame()
     {
         // collect all modified term keys from all patches applied to this language
-        List<string> allModifiedTermKeys = new();
+        List<string> allModifiedTermKeys = [];
         foreach (string patchName in patchesApplied)
         {
             allModifiedTermKeys.AddRange(LanguagePatchRegister.AtName(patchName).patchTerms.Select(x => x.termKey));

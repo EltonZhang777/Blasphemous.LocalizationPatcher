@@ -1,12 +1,7 @@
-﻿using HarmonyLib;
-using I2.Loc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
+﻿using I2.Loc;
 
 namespace Blasphemous.LocalizationPatcher.Extensions;
+
 internal static class I2Extensions
 {
     internal static T DoGetSecondaryTranslatedObj<T>(
@@ -17,7 +12,7 @@ internal static class I2Extensions
         string text;
         string text2;
         localize.DoDeserializeTranslation(mainTranslation, out text, out text2);
-        T t = (T)((object)null);
+        T t = (T)(object)null;
         if (!string.IsNullOrEmpty(text2))
         {
             t = localize.DoGetObject<T>(text2);
@@ -60,7 +55,7 @@ internal static class I2Extensions
     {
         if (string.IsNullOrEmpty(Translation))
         {
-            return (T)((object)null);
+            return (T)(object)null;
         }
         T translatedObject = localize.DoGetTranslatedObject<T>(Translation);
         if (translatedObject == null)

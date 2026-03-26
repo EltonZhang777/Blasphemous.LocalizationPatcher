@@ -28,5 +28,5 @@ public class ModFontInfo
     /// <summary>
     /// The languages that this font can display
     /// </summary>
-    public List<string> supportedLanguages = new();
+    public List<string> supportedLanguages = [];
 }
