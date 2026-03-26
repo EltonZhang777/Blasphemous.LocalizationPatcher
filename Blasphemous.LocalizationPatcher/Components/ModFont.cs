@@ -29,9 +29,13 @@ public class ModFont
     public TMP_FontAsset tmpFont;
 
     /// <summary>
-    /// Regular font asset used for the mod font
+    /// Regular TTF font asset used for the mod font
     /// </summary>
-    public Font regularFont;
+    public Font ttfFont;
+
+    public Material tmpMaterial;
+
+    public Material ttfMaterial;
 
     public string TmpAssetName => info.fontName + "_tmp";
     public string RegularAssetName => info.fontName + "_regular";
@@ -52,12 +56,11 @@ public class ModFont
             throw new System.ArgumentException(errMsg);
         }
 
-        UObject[] assets;
+        Main.LogIfDebug($"Loading assetBundle!");
 #if DEBUG
-        assets = ab.LoadAllAssets();
         StringBuilder sb = new();
-        sb.AppendLine($"All assets: ");
-        foreach (UObject asset in assets)
+        sb.AppendLine($"All assets in AssetBundle {ab.name}: ");
+        foreach (UObject asset in ab.LoadAllAssets())
         {
             sb.AppendLine($"  asset name: `{asset.name}`; asset type: `{asset.GetType()}`");
         }
@@ -65,27 +68,18 @@ public class ModFont
         Main.LogIfDebug(sb.ToString());
 #endif
 
-        // load regular asset
-        assets = ab.LoadAllAssets<Font>();
-        ModLog.Warn($"assets.Length: {assets.Length}");
-        if (assets.Length == 1)
-        {
-            UObject asset = assets[0];
-            Main.LogIfDebug($"acquired regular font asset {asset.name}");
-            regularFont = asset as Font;
-            regularFont.name = RegularAssetName;
-        }
+        // load ttf assets
+        ttfFont = ab.LoadAsset<Font>(info.ttfFontAssetName);
+        ttfFont.name = RegularAssetName;
+        ttfMaterial = ab.LoadAllAssets<Material>().FirstOrDefault(x => x.name == info.ttfMaterialAssetName);
+        ttfMaterial.name = RegularAssetName;
 
-        // load tmp asset
-        assets = ab.LoadAllAssets<TMP_FontAsset>();
-        ModLog.Warn($"assets.Length: {assets.Length}");
-        if (assets.Length == 1)
-        {
-            UObject asset = assets[0];
-            Main.LogIfDebug($"acquired tmp font asset {asset.name}");
-            tmpFont = asset as TMP_FontAsset;
-            tmpFont.name = TmpAssetName;
-        }
+        // WIP
+        //// load tmp asset
+        //tmpFont = ab.LoadAsset<TMP_FontAsset>(info.tmpFontAssetName);
+        //tmpFont.name = TmpAssetName;
+        //tmpMaterial = ab.LoadAsset<Material>(info.tmpMaterialAssetName);
+        //tmpMaterial.name = TmpAssetName;
     }
 
     /// <summary>

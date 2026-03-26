@@ -1,4 +1,4 @@
-﻿using Blasphemous.ModdingAPI.Files;
+using Blasphemous.ModdingAPI.Files;
 using HarmonyLib;
 using Newtonsoft.Json;
 using System;

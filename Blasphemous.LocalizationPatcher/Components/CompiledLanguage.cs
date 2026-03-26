@@ -306,7 +306,7 @@ public class CompiledLanguage
 
         // if modded fonts not found, use vanilla fonts
         string regularFontUsed;
-        if (modFont.regularFont != null)
+        if (modFont.ttfFont != null)
         {
             regularFontUsed = modFont.RegularAssetName;
         }

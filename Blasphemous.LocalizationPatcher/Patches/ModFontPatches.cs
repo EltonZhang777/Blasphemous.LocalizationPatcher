@@ -1,18 +1,23 @@
 ﻿using Blasphemous.LocalizationPatcher.Components;
+using Blasphemous.LocalizationPatcher.Extensions;
 using HarmonyLib;
+using I2.Loc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace Blasphemous.LocalizationPatcher.Patches;
 
 /// <summary>
 /// Makes I2.Loc manager retrieve modded font assets.
 /// </summary>
-[HarmonyPatch(typeof(I2LocManager), "FindAsset", new Type[] { typeof(string) })]
-class LocalizationManager_FindAsset_RetrieveModAsset_Patch
+[HarmonyPatch(typeof(I2LocManager))]
+internal class LocalizationManager_RetrieveModAsset_Patch
 {
-
+    [HarmonyPatch("FindAsset", [typeof(string)])]
+    [HarmonyPrefix]
     public static bool Prefix(string value, ref UObject __result)
     {
         //Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
@@ -35,14 +40,49 @@ class LocalizationManager_FindAsset_RetrieveModAsset_Patch
         if (matchingModFonts.Count == 1)
         {
             ModFont font = matchingModFonts[0];
-            if (font.regularFont != null)
+            if (font.ttfFont != null)
             {
-                __result = font.regularFont;
+                __result = font.ttfFont;
                 return false;
             }
         }
 
         // no mod font found, use vanilla implementation
         return true;
+    }
+}
+
+[HarmonyPatch(typeof(LocalizeTarget_UnityUI_Text))]
+internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
+{
+    /// <summary>
+    /// Make <c>Text</c> objects' localization use custom material instead of font-related material
+    /// </summary>
+    [HarmonyPatch("DoLocalize")]
+    [HarmonyPostfix]
+    public static void UseModFontMaterial(
+        LocalizeTarget_UnityUI_Text __instance,
+        Localize cmp, 
+        string mainTranslation, 
+        string secondaryTranslation)
+    {
+        Text target = __instance.GetTarget(cmp);
+        Font secondaryTranslatedObj = cmp.DoGetSecondaryTranslatedObj<Font>(ref mainTranslation, ref secondaryTranslation);
+        Main.LogIfDebug($"text target exists?: {target != null}, name: {target?.name}");
+        Main.LogIfDebug($"font secondaryTranslatedObj exists?: {secondaryTranslatedObj != null}, name: {secondaryTranslatedObj?.name}");
+        // if vanilla game doesn't specify `secondaryTranslatedObj`, return early.
+        if ((secondaryTranslatedObj == null) || (target == null))
+        {
+            return;
+        }
+
+        // check if the font is modded font, if not, return early.
+        ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.RegularAssetName == secondaryTranslatedObj.name);
+        if ((modFont == null))
+        {
+            return;
+        }
+
+        target.material = modFont.ttfMaterial;
     }
 }
