@@ -308,12 +308,12 @@ public class CompiledLanguage
         string regularFontUsed;
         if (modFont.ttfFont != null)
         {
-            regularFontUsed = modFont.RegularAssetName;
+            regularFontUsed = modFont.TtfAssetName;
         }
         else if (IsVanillaLanguage)
         {
             regularFontUsed = LocalizationPatcher.vanillaRegularFontNames[languageName];
-            ModLog.Error($"Modded regular font `{modFont?.RegularAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
+            ModLog.Error($"Modded regular font `{modFont?.TtfAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
         }
         else
         {

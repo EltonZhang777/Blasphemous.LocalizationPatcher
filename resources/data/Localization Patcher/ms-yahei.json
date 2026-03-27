@@ -1,6 +1,10 @@
 {
     "fontName": "yahei",
     "fileName": "ms-yahei",
+    "ttfFontAssetName": "simhei",
+    "ttfMaterialAssetName": "MS-Yahei SDF_TTF Material",
+    "tmpFontAssetName": "",
+    "tmpMaterialAssetName": "",
     "supportedLanguages": [
         "Chinese"
     ]

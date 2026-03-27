@@ -1,6 +1,10 @@
 {
     "fontName": "vw-bmp-16",
     "fileName": "vonwaonbitmap-16px",
+    "ttfFontAssetName": "VonwaonBitmap-16px",
+    "ttfMaterialAssetName": "VonwaonBitmap-16px SDF_TTF Material",
+    "tmpFontAssetName": "",
+    "tmpMaterialAssetName": "",
     "supportedLanguages": [
         "Chinese"
     ]

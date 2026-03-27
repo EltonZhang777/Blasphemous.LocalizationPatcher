@@ -38,7 +38,7 @@ public class ModFont
     public Material ttfMaterial;
 
     public string TmpAssetName => info.fontName + "_tmp";
-    public string RegularAssetName => info.fontName + "_regular";
+    public string TtfAssetName => info.fontName + "_ttf";
 
     /// <summary>
     /// Standard constructor of ModFont, automatically loads related assets.
@@ -70,9 +70,9 @@ public class ModFont
 
         // load ttf assets
         ttfFont = ab.LoadAsset<Font>(info.ttfFontAssetName);
-        ttfFont.name = RegularAssetName;
+        ttfFont.name = TtfAssetName;
         ttfMaterial = ab.LoadAllAssets<Material>().FirstOrDefault(x => x.name == info.ttfMaterialAssetName);
-        ttfMaterial.name = RegularAssetName;
+        ttfMaterial.name = TtfAssetName;
 
         // WIP
         //// load tmp asset

@@ -35,7 +35,7 @@ internal class LocalizationManager_RetrieveModAsset_Patch
         }
 
         // check if I2.Loc is querying for a regular font asset of a mod font
-        matchingModFonts = ModFontRegister.ModFonts.ToList().Where(x => x.RegularAssetName == value).ToList();
+        matchingModFonts = ModFontRegister.ModFonts.ToList().Where(x => x.TtfAssetName == value).ToList();
         if (matchingModFonts.Count == 1)
         {
             ModFont font = matchingModFonts[0];
@@ -74,7 +74,7 @@ internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
         }
 
         // check if the font is modded font, if not, return early.
-        ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.RegularAssetName == secondaryTranslatedObj.name);
+        ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.TtfAssetName == secondaryTranslatedObj.name);
         if (modFont == null)
         {
             return;

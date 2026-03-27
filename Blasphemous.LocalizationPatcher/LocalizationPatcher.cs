@@ -110,6 +110,8 @@ internal class LocalizationPatcher : BlasMod
         List<string> debugFontNames =
             [
             "vonwaonbitmap-12px",
+            "vonwaonbitmap-16px",
+            "ms-yahei",
             ];
         debugFontNames.ForEach(x => provider.RegisterModFont(new ModFont(FileHandler, $"{x}.json")));
 #endif
