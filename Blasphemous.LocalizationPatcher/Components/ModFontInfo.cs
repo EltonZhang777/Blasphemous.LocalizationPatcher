@@ -17,14 +17,6 @@ public class ModFontInfo
     /// </summary>
     public string fileName = "";
 
-    public string ttfFontAssetName = "";
-
-    public string ttfMaterialAssetName = "";
-
-    public string tmpFontAssetName = "";
-
-    public string tmpMaterialAssetName = "";
-
     /// <summary>
     /// The languages that this font can display
     /// </summary>

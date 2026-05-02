@@ -33,10 +33,6 @@ public class ModFont
     /// </summary>
     public Font ttfFont;
 
-    public Material tmpMaterial;
-
-    public Material ttfMaterial;
-
     public string TmpAssetName => info.fontName + "_tmp";
     public string TtfAssetName => info.fontName + "_ttf";
 
@@ -69,17 +65,12 @@ public class ModFont
 #endif
 
         // load ttf assets
-        ttfFont = ab.LoadAsset<Font>(info.ttfFontAssetName);
+        ttfFont = ab.LoadAllAssets<Font>().FirstOrDefault();
         ttfFont.name = TtfAssetName;
-        ttfMaterial = ab.LoadAllAssets<Material>().FirstOrDefault(x => x.name == info.ttfMaterialAssetName);
-        ttfMaterial.name = TtfAssetName;
 
-        // WIP
         //// load tmp asset
-        //tmpFont = ab.LoadAsset<TMP_FontAsset>(info.tmpFontAssetName);
+        //tmpFont = ab.LoadAllAssets<TMP_FontAsset>().FirstOrDefault();
         //tmpFont.name = TmpAssetName;
-        //tmpMaterial = ab.LoadAsset<Material>(info.tmpMaterialAssetName);
-        //tmpMaterial.name = TmpAssetName;
     }
 
     /// <summary>

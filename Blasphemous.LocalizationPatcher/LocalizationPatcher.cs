@@ -103,15 +103,19 @@ internal class LocalizationPatcher : BlasMod
         }
 
 #if DEBUG
+        // load test Chinese fix patch
+        FileHandler.LoadDataAsJson<LanguagePatch>("test_chinese_fix.json", out LanguagePatch testChineseFixPatch);
+        provider.RegisterLanguagePatch(testChineseFixPatch);
+
         // load debug test patch
         provider.RegisterLanguagePatch(_debugPatch);
 
         // load debug font
         List<string> debugFontNames =
             [
-            "vonwaonbitmap-12px",
+            //"vonwaonbitmap-12px",
             "vonwaonbitmap-16px",
-            "ms-yahei",
+            //"ms-yahei",
             ];
         debugFontNames.ForEach(x => provider.RegisterModFont(new ModFont(FileHandler, $"{x}.json")));
 #endif

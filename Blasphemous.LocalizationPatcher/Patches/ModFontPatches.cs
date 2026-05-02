@@ -55,7 +55,7 @@ internal class LocalizationManager_RetrieveModAsset_Patch
 internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
 {
     /// <summary>
-    /// Make <c>Text</c> objects' localization use custom material instead of font-related material
+    /// Make <c>Text</c> objects' localization use `None` material instead of font-related material
     /// </summary>
     [HarmonyPatch("DoLocalize")]
     [HarmonyPostfix]
@@ -80,6 +80,6 @@ internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
             return;
         }
 
-        target.material = modFont.ttfMaterial;
+        target.material = null;
     }
 }
