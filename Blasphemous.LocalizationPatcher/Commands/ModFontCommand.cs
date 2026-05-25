@@ -37,6 +37,7 @@ internal class ModFontCommand : ModCommand
         Write($"{CommandName} apply [fontName] [languageName]: apply the specified mod font to the speicified language");
         Write($"{CommandName} listsystem : list all system fonts installed on this PC");
         Write($"{CommandName} applysystem [fontName] [languageName]: apply the specified system font to the speicified language");
+        Write($"(Use underscore `_` to represent spaces in font and language names.)");
     }
 
     private void SubCommand_List(string[] parameters)
@@ -96,8 +97,8 @@ internal class ModFontCommand : ModCommand
         if (!ValidateParameterList(parameters, 2))
             return;
 
-        string fontName = parameters[0];
-        string languageName = parameters[1];
+        string fontName = parameters[0].Replace("_", " ");
+        string languageName = parameters[1].Replace("_", " ");
 
         // validate font and language's existence
         if (!ModFontRegister.ModFonts.ToList().Exists(x => x.info.fontName == fontName))
@@ -146,7 +147,7 @@ internal class ModFontCommand : ModCommand
             return;
 
         string fontName = parameters[0];
-        string languageName = parameters[1];
+        string languageName = parameters[1].Replace("_", " ");
 
         // validate font and language's existence
         if (!Main.LocalizationPatcher.SystemFontManager.HasSystemFont(fontName))
