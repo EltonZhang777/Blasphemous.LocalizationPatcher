@@ -20,6 +20,8 @@ internal class ModFontCommand : ModCommand
             { "help", SubCommand_Help },
             { "list", SubCommand_List },
             { "apply", SubCommand_Apply },
+            { "listsystem", SubCommand_ListSystemFonts },
+            { "applysystem", SubCommand_ApplySystemFont }
         };
     }
 
@@ -32,7 +34,9 @@ internal class ModFontCommand : ModCommand
         Write($"{CommandName} list : list all loaded mod fonts");
         Write($"{CommandName} list [languageName] : list all mod fonts applicable to the specified language");
         Write($"{CommandName} list [languageName] [current]: show the currently used fonts of the specified language");
-        Write($"{CommandName} apply [fontName] [languageName]: apply the specified font to the speicified language");
+        Write($"{CommandName} apply [fontName] [languageName]: apply the specified mod font to the speicified language");
+        Write($"{CommandName} listsystem : list all system fonts installed on this PC");
+        Write($"{CommandName} applysystem [fontName] [languageName]: apply the specified system font to the speicified language");
     }
 
     private void SubCommand_List(string[] parameters)
@@ -120,7 +124,45 @@ internal class ModFontCommand : ModCommand
         // apply the font to the specified language
         targetCompiledLanguage.ApplyFontToGame(targetFont);
 
-        Write($"Successfully applied font `{fontName}` to `{languageName}`!");
+        Write($"Successfully applied mod font `{fontName}` to `{languageName}`!");
+        Write($"Fonts applied through commands are only active until exiting game process");
+    }
+
+    private void SubCommand_ListSystemFonts(string[] parameters)
+    {
+        if (!ValidateParameterList(parameters, 0))
+            return;
+
+        Write($"All system fonts on this PC: ");
+        foreach (string fontName in Main.LocalizationPatcher.SystemFontManager.AllSystemFonts)
+        {
+            Write($"  {fontName}");
+        }
+    }
+
+    private void SubCommand_ApplySystemFont(string[] parameters)
+    {
+        if (!ValidateParameterList(parameters, 2))
+            return;
+
+        string fontName = parameters[0];
+        string languageName = parameters[1];
+
+        // validate font and language's existence
+        if (!Main.LocalizationPatcher.SystemFontManager.HasSystemFont(fontName))
+        {
+            Write($"System font `{fontName}` not found on this PC!");
+            return;
+        }
+        if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+        {
+            Write($"Language `{languageName}` not found!");
+            return;
+        }
+
+        Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName);
+
+        Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
         Write($"Fonts applied through commands are only active until exiting game process");
     }
 

@@ -71,6 +71,8 @@ internal class LocalizationPatcher : BlasMod
 
     internal EventHandler EventHandler { get; } = new();
 
+    internal SystemFontManager SystemFontManager { get; private set; } = new();
+
     internal LocalizationPatcher() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
 
     protected override void OnInitialize()

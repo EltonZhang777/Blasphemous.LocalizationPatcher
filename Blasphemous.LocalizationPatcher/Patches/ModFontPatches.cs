@@ -2,7 +2,6 @@
 using Blasphemous.LocalizationPatcher.Extensions;
 using HarmonyLib;
 using I2.Loc;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,33 +19,38 @@ internal class LocalizationManager_RetrieveModAsset_Patch
     public static bool Prefix(string value, ref UObject __result)
     {
         //Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
-        List<ModFont> matchingModFonts = [];
-
-        // check if I2.Loc is querying for a tmp font asset of a mod font
-        matchingModFonts = ModFontRegister.ModFonts.ToList().Where(x => x.TmpAssetName == value).ToList();
-        if (matchingModFonts.Count == 1)
-        {
-            ModFont font = matchingModFonts[0];
-            if (font.tmpFont != null)
-            {
-                __result = font.tmpFont;
-                return false;
-            }
-        }
+        ModFont matchingModFont;
 
         // check if I2.Loc is querying for a regular font asset of a mod font
-        matchingModFonts = ModFontRegister.ModFonts.ToList().Where(x => x.TtfAssetName == value).ToList();
-        if (matchingModFonts.Count == 1)
+        matchingModFont = ModFontRegister.ModFonts.Where(x => x.TtfAssetName == value).FirstOrDefault();
+        if (matchingModFont != null)
         {
-            ModFont font = matchingModFonts[0];
-            if (font.ttfFont != null)
+            if (matchingModFont.ttfFont != null)
             {
-                __result = font.ttfFont;
+                __result = matchingModFont.ttfFont;
                 return false;
             }
         }
 
-        // no mod font found, use vanilla implementation
+        // check if I2.Loc is querying for a tmp font asset of a mod font
+        matchingModFont = ModFontRegister.ModFonts.Where(x => x.TmpAssetName == value).FirstOrDefault();
+        if (matchingModFont != null)
+        {
+            if (matchingModFont.tmpFont != null)
+            {
+                __result = matchingModFont.tmpFont;
+                return false;
+            }
+        }
+
+        // check if I2.Loc is querying for a system font
+        if (Main.LocalizationPatcher.SystemFontManager.TryGetLoadedSystemFont(value, out Font systemFont))
+        {
+            __result = systemFont;
+            return false;
+        }
+
+        // no suitable font found, use vanilla implementation
         return true;
     }
 }
@@ -72,14 +76,16 @@ internal class LocalizeTarget_UnityUI_Text__LoadModFontMaterial_Patch
         {
             return;
         }
+        string fontName = secondaryTranslatedObj.name;
 
-        // check if the font is modded font, if not, return early.
-        ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.TtfAssetName == secondaryTranslatedObj.name);
-        if (modFont == null)
+        // check if the font is modded font or system font, if not, return early.
+        if ((ModFontRegister.ModFonts.FirstOrDefault(x => x.TtfAssetName == fontName) == null)
+            && (!Main.LocalizationPatcher.SystemFontManager.HasSystemFont(fontName)))
         {
             return;
         }
 
+        // use `None` material
         target.material = null;
     }
 }

@@ -349,6 +349,24 @@ public class CompiledLanguage
     }
 
     /// <summary>
+    /// Apply specified system font (installed in the user's computer) to this language
+    /// </summary>
+    public void ApplySystemFontToGame(string fontName)
+    {
+        if (!Main.LocalizationPatcher.SystemFontManager.HasLoadedSystemFont(fontName))
+            return;
+
+        // update the fonts to I2.Loc manager
+        TryUpdateTerm("UI/FONT", fontName, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm("UI/FONT_SCROLL", fontName, PatchTerm.TermOperation.ReplaceAll);
+
+        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL"]);
+
+        // force localize the language in I2.Loc to apply the font
+        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+    }
+
+    /// <summary>
     /// Get the fonts currently used by this language
     /// </summary>
     public void GetCurrentFonts(out string regularFontUsed, out string tmpFontUsed)
