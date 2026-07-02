@@ -59,6 +59,12 @@ internal class L10NGlobalPersistenceData : GlobalSaveData
         }
     }
 
+    internal void RemoveAllAppliedPatches(string languageCode)
+    {
+        UpdateNewLanguageCodes();
+        languageCodeToAppliedPatches[languageCode].Clear();
+    }
+
     internal void RemoveAppliedFont(string languageCode, string fontName)
     {
         UpdateNewLanguageCodes();
@@ -66,5 +72,11 @@ internal class L10NGlobalPersistenceData : GlobalSaveData
         {
             languageCodeToAppliedFonts[languageCode].Remove(fontName);
         }
+    }
+
+    internal void RemoveAllAppliedFonts(string languageCode)
+    {
+        UpdateNewLanguageCodes();
+        languageCodeToAppliedFonts[languageCode].Clear();
     }
 }

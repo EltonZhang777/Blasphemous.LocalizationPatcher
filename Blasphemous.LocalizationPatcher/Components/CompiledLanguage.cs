@@ -50,6 +50,11 @@ public class CompiledLanguage
     /// </summary>
     public List<ModFont> modFonts = [];
 
+    /// <summary>
+    /// The original term contents of the language terms, before any patches are applied.
+    /// </summary>
+    private List<string> _originalTermContentsBackup = [];
+
     private int _languageIndex = -1;
 
     internal bool IsVanillaLanguage => LocalizationPatcher.IsVanillaLanguage(languageName);
@@ -221,6 +226,42 @@ public class CompiledLanguage
     }
 
     /// <summary>
+    /// Remove a specific patch from this language by resetting all terms to original,
+    /// then re-apply remaining patches in their original order.
+    /// </summary>
+    public void RemovePatchFromGame(string patchName)
+    {
+        if (!patchesApplied.Contains(patchName))
+        {
+            ModLog.Warn($"Cannot remove unapplied patch `{patchName}` from {languageName}!");
+            return;
+        }
+
+        // Save remaining patches in original order (excluding the one to remove)
+        List<string> remainingPatches = patchesApplied.Where(p => p != patchName).ToList();
+
+        // Clear applied patches list (will be rebuilt by re-compilation)
+        patchesApplied.Clear();
+
+        // Reset all term data to original backup
+        ResetTermsToOriginal();
+
+        // Re-apply remaining patches in their original order
+        foreach (string remainingPatchName in remainingPatches)
+        {
+            LanguagePatchRegister.AtName(remainingPatchName).CompileText();
+        }
+
+        // Write the final state to game
+        WriteAllTermsToGame();
+
+        // record change to save data
+        RecordRemovedPatch(patchName);
+
+        ModLog.Info($"Removed patch `{patchName}` from {languageName} and re-applied {remainingPatches.Count} remaining patches.");
+    }
+
+    /// <summary>
     /// Optimized implementation to write all patched terms to game
     /// </summary>
     public void WriteAllPatchesToGame()
@@ -294,7 +335,69 @@ public class CompiledLanguage
                 ModLog.Warn($"Error loading term {termKeys[i]} from language {languageName}");
             }
         }
+
+        // backup the original term contents
+        _originalTermContentsBackup = termContents.ToList();
     }
+    
+    /// <summary>
+    /// Restore the original terms of this language to game's localization
+    /// </summary>
+    public void RestoreOriginalTermsToGame()
+    {
+        ResetTermsToOriginal();
+        patchesApplied = [];
+        WriteAllTermsToGame();
+
+        // record change to save data
+        RecordAllPatchesRemoved();
+
+        ModLog.Info($"Restored original terms of {languageName} to game.");
+    }
+
+    /// <summary>
+    /// Reset all term data to original backup without writing to game or clearing patchesApplied.
+    /// </summary>
+    internal void ResetTermsToOriginal()
+    {
+        termContents = _originalTermContentsBackup.ToList();
+        termPrefixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
+        termSuffixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
+    }
+
+    #region Persistence recording methods
+
+    internal void RecordAppliedPatch(string patchName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedPatch(languageCode, patchName);
+    }
+
+    internal void RecordRemovedPatch(string patchName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAppliedPatch(languageCode, patchName);
+    }
+
+    internal void RecordAllPatchesRemoved()
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAllAppliedPatches(languageCode);
+    }
+
+    internal void RecordAppliedFont(string fontName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(languageCode, fontName);
+    }
+
+    internal void RecordRemovedFont(string fontName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAppliedFont(languageCode, fontName);
+    }
+
+    internal void RecordAllFontsRemoved()
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAllAppliedFonts(languageCode);
+    }
+
+    #endregion
 
     /// <summary>
     /// Apply the specified font to this language
@@ -346,6 +449,9 @@ public class CompiledLanguage
 
         // force localize the language in I2.Loc to apply the font
         I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+
+        // record change to save data
+        RecordAppliedFont(modFont.info.fontName);
     }
 
     /// <summary>
@@ -364,6 +470,9 @@ public class CompiledLanguage
 
         // force localize the language in I2.Loc to apply the font
         I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+
+        // record change to save data
+        RecordAppliedFont(fontName);
     }
 
     /// <summary>

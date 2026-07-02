@@ -1,4 +1,4 @@
-﻿using Blasphemous.CheatConsole;
+using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Components;
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ internal class ModFontCommand : ModCommand
         {
             { "help", SubCommand_Help },
             { "list", SubCommand_List },
+            { "revert", Subcommand_Revert },
             { "apply", SubCommand_Apply },
             { "listsystem", SubCommand_ListSystemFonts },
             { "applysystem", SubCommand_ApplySystemFont }
@@ -37,6 +38,7 @@ internal class ModFontCommand : ModCommand
         Write($"{CommandName} apply [fontName] [languageName]: apply the specified mod font to the speicified language");
         Write($"{CommandName} listsystem : list all system fonts installed on this PC");
         Write($"{CommandName} applysystem [fontName] [languageName]: apply the specified system font to the speicified language");
+        Write($"{CommandName} revert [languageName]: remove applied mod fonts for the specified language");
         Write($"(Use underscore `_` to represent spaces in font and language names.)");
     }
 
@@ -125,9 +127,6 @@ internal class ModFontCommand : ModCommand
         // apply the font to the specified language
         targetCompiledLanguage.ApplyFontToGame(targetFont);
 
-        // record the applied font to global persistence data
-        Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(targetCompiledLanguage.languageCode, targetFont.info.fontName);
-
         Write($"Successfully applied mod font `{fontName}` to `{languageName}`!");
         Write($"Fonts applied through commands are only active until exiting game process");
     }
@@ -166,12 +165,51 @@ internal class ModFontCommand : ModCommand
 
         Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName);
 
-        // record the applied font to global persistence data
-        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
-        Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(targetCompiledLanguage.languageCode, fontName);
-
         Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
         Write($"Fonts applied through commands are only active until exiting game process");
+    }
+
+    private void Subcommand_Revert(string[] parameters)
+    {
+        if (!ValidateParameterList(parameters, 1))
+            return;
+        
+        string languageName = parameters[0].Replace("_", " ");
+
+        // validate language's existence
+        if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+        {
+            Write($"Language `{languageName}` not found!");
+            return;
+        }
+
+        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
+
+        // determine vanilla default fonts for this language
+        string regularFont;
+        string tmpFont;
+        if (LocalizationPatcher.IsVanillaLanguage(languageName))
+        {
+            regularFont = LocalizationPatcher.vanillaRegularFontNames[languageName];
+            tmpFont = LocalizationPatcher.vanillaTmpFontNames[languageName];
+        }
+        else
+        {
+            regularFont = "MajesticExtended_Pixel_Scroll";
+            tmpFont = "MajesticExtended_FullLatin";
+        }
+
+        // reset font terms to vanilla defaults
+        targetCompiledLanguage.TryUpdateTerm("UI/FONT", regularFont, PatchTerm.TermOperation.ReplaceAll);
+        targetCompiledLanguage.TryUpdateTerm("UI/FONT_SCROLL", regularFont, PatchTerm.TermOperation.ReplaceAll);
+        targetCompiledLanguage.TryUpdateTerm("UI/FONT_TEXTMESH_PRO", tmpFont, PatchTerm.TermOperation.ReplaceAll);
+
+        targetCompiledLanguage.WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
+
+        // force localize the language in I2.Loc to apply the font change
+        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+
+        Write($"Successfully reverted all mod fonts for `{languageName}`!");
     }
 
     private bool ValidateParameterList(string[] parameters, List<int> validParameterLengths)
