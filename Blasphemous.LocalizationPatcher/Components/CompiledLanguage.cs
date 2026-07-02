@@ -339,7 +339,7 @@ public class CompiledLanguage
         // backup the original term contents
         _originalTermContentsBackup = termContents.ToList();
     }
-    
+
     /// <summary>
     /// Restore the original terms of this language to game's localization
     /// </summary>
@@ -350,7 +350,7 @@ public class CompiledLanguage
         WriteAllTermsToGame();
 
         // record change to save data
-        RecordAllPatchesRemoved();
+        RemoveAllRecordedPatches();
 
         ModLog.Info($"Restored original terms of {languageName} to game.");
     }
@@ -377,13 +377,16 @@ public class CompiledLanguage
         Main.LocalizationPatcher.globalPersistenceData.RemoveAppliedPatch(languageCode, patchName);
     }
 
-    internal void RecordAllPatchesRemoved()
+    internal void RemoveAllRecordedPatches()
     {
         Main.LocalizationPatcher.globalPersistenceData.RemoveAllAppliedPatches(languageCode);
     }
 
     internal void RecordAppliedFont(string fontName)
     {
+        // because applying a font overwrites the previous one, remove all previous fonts first.
+        RemoveAllRecordedFonts();
+
         Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(languageCode, fontName);
     }
 
@@ -392,7 +395,7 @@ public class CompiledLanguage
         Main.LocalizationPatcher.globalPersistenceData.RemoveAppliedFont(languageCode, fontName);
     }
 
-    internal void RecordAllFontsRemoved()
+    internal void RemoveAllRecordedFonts()
     {
         Main.LocalizationPatcher.globalPersistenceData.RemoveAllAppliedFonts(languageCode);
     }

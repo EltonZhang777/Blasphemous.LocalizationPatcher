@@ -1,4 +1,4 @@
-﻿﻿using Blasphemous.CheatConsole;
+﻿using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Components;
 using Newtonsoft.Json;
 using System;
@@ -94,7 +94,6 @@ internal class LanguagePatchCommand : ModCommand
         targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
 
         Write($"Successfully applied patch {parameters[0]}!");
-        Write($"Patches applied through commands are only active until exiting game process");
     }
 
     private void SubCommand_ExportToJson(string[] parameters)
@@ -140,7 +139,7 @@ internal class LanguagePatchCommand : ModCommand
 
         Write($"Successfully removed patch `{parameters[0]}` from game!");
     }
-    
+
     /// <summary>
     /// Remove all applied language patches from the game by resetting all languages to default.
     /// </summary>

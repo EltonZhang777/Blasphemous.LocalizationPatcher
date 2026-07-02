@@ -128,7 +128,6 @@ internal class ModFontCommand : ModCommand
         targetCompiledLanguage.ApplyFontToGame(targetFont);
 
         Write($"Successfully applied mod font `{fontName}` to `{languageName}`!");
-        Write($"Fonts applied through commands are only active until exiting game process");
     }
 
     private void SubCommand_ListSystemFonts(string[] parameters)
@@ -166,14 +165,13 @@ internal class ModFontCommand : ModCommand
         Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName);
 
         Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
-        Write($"Fonts applied through commands are only active until exiting game process");
     }
 
     private void Subcommand_Revert(string[] parameters)
     {
         if (!ValidateParameterList(parameters, 1))
             return;
-        
+
         string languageName = parameters[0].Replace("_", " ");
 
         // validate language's existence

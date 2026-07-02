@@ -1,4 +1,4 @@
-﻿using Blasphemous.CheatConsole;
+using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
@@ -15,7 +15,7 @@ namespace Blasphemous.LocalizationPatcher;
 
 internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPersistenceData>
 {
-    internal L10NGlobalPersistenceData globalPersistenceData = new();
+    internal L10NGlobalPersistenceData globalPersistenceData;
 
     /// <summary>
     /// all terms keys in Blasphemous' localization service `I2.Loc`.
@@ -279,6 +279,11 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
     /// </summary>
     private void OnLoadMainMenuFirstTime()
     {
+        Main.LogIfDebug($"language on startup: {globalPersistenceData.languageOnStartup}");
+        foreach (KeyValuePair<string, List<string>> entry in globalPersistenceData.languageCodeToAppliedFonts)
+        {
+            Main.LogIfDebug($"Applied fonts for language code `{entry.Key}`: {string.Join(", ", entry.Value.ToArray())}");
+        }
         // Determine language chosen on startup
         // read save data first, use save data settings if the language is loaded
         if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
@@ -302,6 +307,42 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
 
         // Restore langauge option to the user-selected langauge after entering main menu for the first time
         I2LocManager.CurrentLanguage = globalPersistenceData.languageOnStartup;
+
+        // Restore all saved fonts from persistence data
+        ModLog.Info("Restoring saved fonts...");
+        foreach (KeyValuePair<string, List<string>> entry in globalPersistenceData.languageCodeToAppliedFonts.ToList())
+        {
+            Main.LogIfDebug($"Restoring saved fonts for language code `{entry.Key}`...");
+            string languageCode = entry.Key;
+            foreach (string fontName in entry.Value.ToList())
+            {
+                CompiledLanguage compiledLang = compiledLanguages.FirstOrDefault(x => x.languageCode == languageCode);
+                if (compiledLang == null)
+                {
+                    ModLog.Warn($"Language code `{languageCode}` not found when restoring saved font `{fontName}`.");
+                    continue;
+                }
+
+                // Try restoring as a mod font
+                ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.info.fontName == fontName);
+                if (modFont != null)
+                {
+                    ModLog.Info($"Restoring saved mod font `{fontName}` to `{compiledLang.languageName}`.");
+                    compiledLang.ApplyFontToGame(modFont);
+                    continue;
+                }
+
+                // Try restoring as a system font
+                if (SystemFontManager.HasSystemFont(fontName))
+                {
+                    ModLog.Info($"Restoring saved system font `{fontName}` to `{compiledLang.languageName}`.");
+                    SystemFontManager.TryApplySystemFont(fontName, compiledLang.languageName);
+                    continue;
+                }
+
+                ModLog.Warn($"Saved font `{fontName}` not found for language `{compiledLang.languageName}`.");
+            }
+        }
     }
 
     internal CompiledLanguage RegisterCompiledLanguageObject(string langName, string langCode)

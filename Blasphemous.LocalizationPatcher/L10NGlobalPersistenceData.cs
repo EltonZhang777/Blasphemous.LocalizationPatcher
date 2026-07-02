@@ -1,38 +1,35 @@
-using Blasphemous.ModdingAPI.Persistence;
-using System;
+﻿using Blasphemous.ModdingAPI.Persistence;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Blasphemous.LocalizationPatcher;
 
 internal class L10NGlobalPersistenceData : GlobalSaveData
 {
-    internal Dictionary<string, List<string>> languageCodeToAppliedPatches = new();
-    internal Dictionary<string, List<string>> languageCodeToAppliedFonts = new();
+    public Dictionary<string, List<string>> languageCodeToAppliedPatches = [];
+    public Dictionary<string, List<string>> languageCodeToAppliedFonts = [];
 
     /// <summary>
     /// Language chosen when the game starts.
     /// </summary>
-    internal string languageOnStartup = "";
+    public string languageOnStartup = "";
 
     /// <summary>
     /// Create a new List for new language code if one doesn't exist.
     /// </summary>
     internal void UpdateNewLanguageCodes()
     {
-        List<string> languageNames = new();
-        List<string> languageCodes = new();
+        List<string> languageNames = [];
+        List<string> languageCodes = [];
         LocalizationPatcher.GetAllLanguageNamesAndCodes(ref languageNames, ref languageCodes);
         foreach (string languageCode in languageCodes)
         {
             if (!languageCodeToAppliedPatches.ContainsKey(languageCode))
             {
-                languageCodeToAppliedPatches[languageCode] = new();
+                languageCodeToAppliedPatches[languageCode] = [];
             }
             if (!languageCodeToAppliedFonts.ContainsKey(languageCode))
             {
-                languageCodeToAppliedFonts[languageCode] = new();
+                languageCodeToAppliedFonts[languageCode] = [];
             }
         }
     }
