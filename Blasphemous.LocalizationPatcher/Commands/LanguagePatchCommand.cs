@@ -89,6 +89,9 @@ internal class LanguagePatchCommand : ModCommand
         targetPatch.CompileText();
         targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
 
+        // record the applied patch to global persistence data
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedPatch(targetPatch.CompiledLanguage.languageCode, targetPatch.patchName);
+
         Write($"Successfully applied patch {parameters[0]}!");
         Write($"Patches applied through commands are only active until exiting game process");
     }

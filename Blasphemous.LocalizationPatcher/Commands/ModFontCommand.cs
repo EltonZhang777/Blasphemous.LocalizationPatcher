@@ -125,6 +125,9 @@ internal class ModFontCommand : ModCommand
         // apply the font to the specified language
         targetCompiledLanguage.ApplyFontToGame(targetFont);
 
+        // record the applied font to global persistence data
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(targetCompiledLanguage.languageCode, targetFont.info.fontName);
+
         Write($"Successfully applied mod font `{fontName}` to `{languageName}`!");
         Write($"Fonts applied through commands are only active until exiting game process");
     }
@@ -162,6 +165,10 @@ internal class ModFontCommand : ModCommand
         }
 
         Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName);
+
+        // record the applied font to global persistence data
+        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(targetCompiledLanguage.languageCode, fontName);
 
         Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
         Write($"Fonts applied through commands are only active until exiting game process");
