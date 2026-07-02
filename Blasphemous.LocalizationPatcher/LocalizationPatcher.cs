@@ -260,47 +260,48 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
             modFont.AttachFontToLangauges();
         }
 
-        // Determine language chosen on startup
-        // read config first, use config settings if the language is loaded
-        if (string.IsNullOrEmpty(config.languageOnStartup)
-            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(config.languageOnStartup)))
-        {
-            // if not set or does not exist, use the stored language in game settings
-            config.languageOnStartup = _selectedLangaugeInOptions;
-
-            if (string.IsNullOrEmpty(config.languageOnStartup)
-            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(config.languageOnStartup)))
-            {
-                // if language in settings does not exist, default to English
-                config.languageOnStartup = "English";
-            }
-            ModLog.Info($"No language on startup set in config, using language: {config.languageOnStartup}");
-        }
-        else
-        {
-            ModLog.Info($"Using language on startup from config: {config.languageOnStartup}");
-        }
-        // actual language setting is done when loading main menu
-
         // final config save
         ConfigHandler.Save<Config>(config);
     }
 
     protected override void OnLevelLoaded(string oldLevel, string newLevel)
     {
-        // Restore langauge option to the user-selected langauge after entering main menu for the first time
         if (newLevel.Equals("MainMenu") && _firstMainMenuEnterFlag)
         {
             _firstMainMenuEnterFlag = false;
-            I2LocManager.CurrentLanguage = config.languageOnStartup;
+            OnLoadMainMenuFirstTime();
         }
     }
 
-    protected override void OnDispose()
+    /// <summary>
+    /// Executes when the game enters the main menu for the first time. 
+    /// Useful for treating processes requiring saveData because it is read after <c>OnAllInitialized</c>.
+    /// </summary>
+    private void OnLoadMainMenuFirstTime()
     {
-        // store current selected langauge to config for startup next time
-        config.languageOnStartup = I2LocManager.CurrentLanguage;
-        ConfigHandler.Save<Config>(config);
+        // Determine language chosen on startup
+        // read save data first, use save data settings if the language is loaded
+        if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
+            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(globalPersistenceData.languageOnStartup)))
+        {
+            // if not set or does not exist, use the stored language in game settings
+            globalPersistenceData.languageOnStartup = _selectedLangaugeInOptions;
+
+            if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
+            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(globalPersistenceData.languageOnStartup)))
+            {
+                // if language in settings does not exist, default to English
+                globalPersistenceData.languageOnStartup = "English";
+            }
+            ModLog.Info($"No language on startup set in save data, using language: {globalPersistenceData.languageOnStartup}");
+        }
+        else
+        {
+            ModLog.Info($"Using language on startup from save data: {globalPersistenceData.languageOnStartup}");
+        }
+
+        // Restore langauge option to the user-selected langauge after entering main menu for the first time
+        I2LocManager.CurrentLanguage = globalPersistenceData.languageOnStartup;
     }
 
     internal CompiledLanguage RegisterCompiledLanguageObject(string langName, string langCode)
@@ -347,6 +348,9 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
 
     public L10NGlobalPersistenceData SaveGlobal()
     {
+        // store current selected langauge to saveData for startup next time
+        globalPersistenceData.languageOnStartup = I2LocManager.CurrentLanguage;
+
         return globalPersistenceData;
     }
 

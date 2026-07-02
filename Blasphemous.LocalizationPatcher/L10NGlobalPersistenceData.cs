@@ -1,4 +1,4 @@
-﻿using Blasphemous.ModdingAPI.Persistence;
+using Blasphemous.ModdingAPI.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,11 @@ internal class L10NGlobalPersistenceData : GlobalSaveData
 {
     internal Dictionary<string, List<string>> languageCodeToAppliedPatches = new();
     internal Dictionary<string, List<string>> languageCodeToAppliedFonts = new();
+
+    /// <summary>
+    /// Language chosen when the game starts.
+    /// </summary>
+    internal string languageOnStartup = "";
 
     /// <summary>
     /// Create a new List for new language code if one doesn't exist.
