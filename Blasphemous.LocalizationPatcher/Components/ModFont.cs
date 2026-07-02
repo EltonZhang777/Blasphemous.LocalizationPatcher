@@ -1,6 +1,7 @@
 ﻿using Blasphemous.LocalizationPatcher.Extensions;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TMPro;
@@ -85,14 +86,15 @@ public class ModFont
     /// <summary>
     /// Attach this font to all its supported languages
     /// </summary>
-    public void AttachFontToLangauges()
+    public void AttachFontToLanguages()
     {
+        List<string> removedLanguages = [];
         foreach (string langName in info.supportedLanguages)
         {
             if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == langName))
             {
-                // if the language does not exist, remove it from the supportedLanguages list
-                info.supportedLanguages.Remove(langName);
+                // if the language does not exist, mark it for removal
+                removedLanguages.Add(langName);
             }
             else
             {
@@ -101,6 +103,12 @@ public class ModFont
                     .First(x => x.languageName == langName)
                     .modFonts.Add(this);
             }
+        }
+
+        // batch remove languages that are not in the compiled languages list
+        foreach (string langName in removedLanguages)
+        {
+            info.supportedLanguages.Remove(langName);
         }
     }
 }

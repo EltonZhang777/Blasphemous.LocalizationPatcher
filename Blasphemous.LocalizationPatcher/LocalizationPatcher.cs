@@ -108,10 +108,6 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         }
 
 #if DEBUG
-        // load test Chinese fix patch
-        FileHandler.LoadDataAsJson<LanguagePatch>("test_chinese_fix.json", out LanguagePatch testChineseFixPatch);
-        provider.RegisterLanguagePatch(testChineseFixPatch);
-
         // load debug test patch
         provider.RegisterLanguagePatch(_debugPatch);
 
@@ -257,7 +253,7 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // Hook all ModFont objects to CompiledLanguage objects
         foreach (ModFont modFont in ModFontRegister.ModFonts)
         {
-            modFont.AttachFontToLangauges();
+            modFont.AttachFontToLanguages();
         }
 
         // final config save

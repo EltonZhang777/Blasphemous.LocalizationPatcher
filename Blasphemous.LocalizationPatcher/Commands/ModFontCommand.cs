@@ -35,9 +35,9 @@ internal class ModFontCommand : ModCommand
         Write($"{CommandName} list : list all loaded mod fonts");
         Write($"{CommandName} list [languageName] : list all mod fonts applicable to the specified language");
         Write($"{CommandName} list [languageName] [current]: show the currently used fonts of the specified language");
-        Write($"{CommandName} apply [fontName] [languageName]: apply the specified mod font to the speicified language");
+        Write($"{CommandName} apply [fontName] [languageName]: apply the specified mod font to the specified language");
         Write($"{CommandName} listsystem : list all system fonts installed on this PC");
-        Write($"{CommandName} applysystem [fontName] [languageName]: apply the specified system font to the speicified language");
+        Write($"{CommandName} applysystem [fontName] [languageName]: apply the specified system font to the specified language");
         Write($"{CommandName} revert [languageName]: remove applied mod fonts for the specified language");
         Write($"(Use underscore `_` to represent spaces in font and language names.)");
     }
