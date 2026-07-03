@@ -8,8 +8,8 @@
     <Product>Localization Patcher</Product>
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
-    <Description>Allows this mod and other mods to customize vanilla localization texts of Blasphemous</Description>
-    <Version>2.0.1</Version>
+    <Description>Allows this mod and other mods to customize localization texts and fonts of Blasphemous</Description>
+    <Version>2.0.0</Version>
 
     <TargetName>LocalizationPatcher</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
