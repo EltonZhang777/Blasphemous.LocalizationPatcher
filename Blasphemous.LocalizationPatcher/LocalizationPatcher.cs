@@ -2,6 +2,7 @@ using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
+using Blasphemous.LocalizationPatcher.Extensions;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Persistence;
 using Framework.Managers;
@@ -105,6 +106,18 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         foreach (ModCommand command in commands)
         {
             provider.RegisterCommand(command);
+        }
+
+        // register all patches in the `auto-load language patches` folder under data path
+        string autoLoadPatchesPath = Path.Combine(FileHandler.GetDataPath(), "auto-load language patches");
+        if (Directory.Exists(autoLoadPatchesPath))
+        {
+            foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.json"))
+            {
+                string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
+                FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
+                provider.RegisterLanguagePatch(autoPatch);
+            }
         }
 
 #if DEBUG
@@ -267,6 +280,12 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
             _firstMainMenuEnterFlag = false;
             OnLoadMainMenuFirstTime();
         }
+
+        // entering game level from main menu
+        if (!newLevel.Equals("MainMenu") && oldLevel.Equals("MainMenu"))
+        {
+            OnEnterSaveFromMainMenu();
+        }
     }
 
     /// <summary>
@@ -334,13 +353,22 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
                 ModLog.Warn($"Saved font `{fontName}` not found for language `{compiledLang.languageName}`.");
             }
         }
+    }
 
+    private void OnEnterSaveFromMainMenu()
+    {
         // check every flag-triggered patch and apply the patch if the flag is set to true
         foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnFlag))
         {
+            Main.LogIfDebug($"Checking flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`: {Core.Events.GetFlag(patch.patchFlag)}");
             if (Core.Events.GetFlag(patch.patchFlag))
             {
-                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` because flag `{patch.patchFlag}` is already set.");
+                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
+                patch.OnFlagChange(patch.patchFlag);
+            }
+            else
+            {
+                ModLog.Info($"Deactivating flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
                 patch.OnFlagChange(patch.patchFlag);
             }
         }

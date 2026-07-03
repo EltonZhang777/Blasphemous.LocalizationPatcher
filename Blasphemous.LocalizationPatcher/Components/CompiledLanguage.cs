@@ -1,7 +1,10 @@
 ﻿using Blasphemous.ModdingAPI;
+using Gameplay.UI;
 using I2.Loc;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
@@ -159,7 +162,8 @@ public class CompiledLanguage
     }
 
     /// <summary>
-    /// Write selected terms of CompiledLanguage object into Blasphemous
+    /// Write selected terms of CompiledLanguage object into Blasphemous,
+    /// then force localize the language to apply the updated terms.
     /// </summary>
     public void WriteTermsToGame(List<string> keys)
     {
@@ -208,6 +212,9 @@ public class CompiledLanguage
         {
             ModLog.Info($"Update process encountered no error.\n");
         }
+
+        // force localize the language in I2.Loc to apply the updated terms
+        RefreshLocalizationLanguage();
     }
 
     /// <summary>
@@ -451,7 +458,7 @@ public class CompiledLanguage
         WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
 
         // force localize the language in I2.Loc to apply the font
-        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+        RefreshLocalizationLanguage();
 
         // record change to save data
         RecordAppliedFont(modFont.info.fontName);
@@ -472,7 +479,7 @@ public class CompiledLanguage
         WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL"]);
 
         // force localize the language in I2.Loc to apply the font
-        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+        RefreshLocalizationLanguage();
 
         // record change to save data
         RecordAppliedFont(fontName);
@@ -509,5 +516,41 @@ public class CompiledLanguage
         int termIndex = termKeys.IndexOf(termKey);
         termPrefixes[termIndex] = string.Empty;
         termSuffixes[termIndex] = string.Empty;
+    }
+
+    /// <summary>
+    /// Refresh current game language to update localization. 
+    /// </summary>
+    internal void RefreshLocalizationLanguage()
+    {
+        // if the game is NOT currently using the language being patched, it will be updated next time the player switch to this language, so nothing to do now.
+        if (I2LocManager.CurrentLanguage != languageName)
+            return;
+
+        Main.LogIfDebug($"Refreshing language `{languageName}` to update localization.");
+        // refresh current language by switching to another language and switch back
+        // determine the parent for executing coroutine. Use any MonoBehaviour as fallback for UIController.
+        MonoBehaviour coroutineParent = UIController.instance ?? UObject.FindObjectOfType<MonoBehaviour>();
+        if (I2LocManager.CurrentLanguage != "English")
+        {
+            // if current language isn't English, switch to English and switch back
+            coroutineParent.StartCoroutine(SwitchToTargetLanguageAndSwitchBack("English"));
+        }
+        else
+        {
+            // current language is English, switch to Chinese and switch back
+            coroutineParent.StartCoroutine(SwitchToTargetLanguageAndSwitchBack("Chinese"));
+        }
+    }
+
+    /// <summary>
+    /// Switch to target language and switch back to current language to refresh localization. 
+    /// </summary>
+    private IEnumerator SwitchToTargetLanguageAndSwitchBack(string targetLanguage)
+    {
+        yield return new WaitForEndOfFrame();
+        I2LocManager.SetLanguageAndCode(targetLanguage, I2LocManager.GetLanguageCode(targetLanguage), true, true);
+        yield return new WaitForEndOfFrame();
+        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
     }
 }

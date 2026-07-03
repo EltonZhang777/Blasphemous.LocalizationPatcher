@@ -33,7 +33,7 @@
     </PropertyGroup>
     <ItemGroup>
       <DataDlls Include="$(ResourcesFolder)data\*" />
-      <DataFiles Include="$(ResourcesFolder)data\$(Product)\*" />
+      <DataFiles Include="$(ResourcesFolder)data\$(Product)\**\*" />
       <Levels Include="$(ResourcesFolder)levels\$(Product)\*" />
       <Localization Include="$(ResourcesFolder)localization\*" />
     </ItemGroup>
@@ -44,7 +44,7 @@
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevFolder)plugins" />
     <Copy SourceFiles="@(DataDlls)" DestinationFolder="$(DevFolder)data" />
-    <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(DevFolder)data\$(Product)" />
+    <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles->'$(DevFolder)data\$(Product)\%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(Levels)" DestinationFolder="$(DevFolder)levels\$(Product)" />
     <Copy SourceFiles="@(Localization)" DestinationFolder="$(DevFolder)localization" />
 
@@ -54,7 +54,7 @@
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ExportFolder)plugins" />
     <Copy SourceFiles="@(DataDlls)" DestinationFolder="$(ExportFolder)data" />
-    <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(ExportFolder)data\$(Product)" />
+    <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles->'$(ExportFolder)data\$(Product)\%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(Levels)" DestinationFolder="$(ExportFolder)levels\$(Product)" />
     <Copy SourceFiles="@(Localization)" DestinationFolder="$(ExportFolder)localization" />
     <ZipDirectory SourceDirectory="$(ExportFolder)" DestinationFile="$(ExportFolder)..\$(TargetName).zip" Overwrite="true" />
