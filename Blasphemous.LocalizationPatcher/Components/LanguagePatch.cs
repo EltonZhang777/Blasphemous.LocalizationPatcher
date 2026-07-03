@@ -268,16 +268,38 @@ public class LanguagePatch
     }
 
     /// <summary>
-    /// Apply the patch to game when the corresponding flag is set to true
+    /// Apply the patch to game when the corresponding flag is set to true, remove patch when flag is set to false.
     /// </summary>
-    protected void OnFlagChange(string flagId)
+    protected internal void OnFlagChange(string flagId)
     {
         if (flagId != patchFlag)
             return;
-        if (Core.Events.GetFlag(flagId) == false)
-            return;
 
-        CompileText();
-        CompiledLanguage.WriteAllTermsToGame();
+        if (Core.Events.GetFlag(flagId))
+        {
+            // Flag is set to true: apply the patch
+            if (isApplied)
+            {
+                ModLog.Warn($"Patch `{patchName}` is already applied.");
+                return;
+            }
+
+            CompileText();
+            CompiledLanguage.WriteAllTermsToGame();
+            CompiledLanguage.RecordAppliedPatch(patchName);
+            isApplied = true;
+        }
+        else
+        {
+            // Flag is set to false: remove the patch
+            if (!CompiledLanguage.patchesApplied.Contains(patchName))
+            {
+                ModLog.Warn($"Patch `{patchName}` is not applied, cannot remove.");
+                return;
+            }
+
+            CompiledLanguage.RemovePatchFromGame(patchName);
+            isApplied = false;
+        }
     }
 }

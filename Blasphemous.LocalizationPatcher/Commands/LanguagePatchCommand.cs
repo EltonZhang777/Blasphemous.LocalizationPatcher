@@ -94,6 +94,7 @@ internal class LanguagePatchCommand : ModCommand
         targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
 
         Write($"Successfully applied patch {parameters[0]}!");
+        Write($"Manual patches applied through commands are only active until exiting game process");
     }
 
     private void SubCommand_ExportToJson(string[] parameters)
@@ -138,6 +139,7 @@ internal class LanguagePatchCommand : ModCommand
         targetPatch.CompiledLanguage.RemovePatchFromGame(targetPatch.patchName);
 
         Write($"Successfully removed patch `{parameters[0]}` from game!");
+        Write($"OnInitialize and OnFlag patches removed through commands are only deactivated until exiting game process");
     }
 
     /// <summary>

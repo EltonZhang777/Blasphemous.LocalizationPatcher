@@ -275,11 +275,6 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
     /// </summary>
     private void OnLoadMainMenuFirstTime()
     {
-        Main.LogIfDebug($"language on startup: {globalPersistenceData.languageOnStartup}");
-        foreach (KeyValuePair<string, List<string>> entry in globalPersistenceData.languageCodeToAppliedFonts)
-        {
-            Main.LogIfDebug($"Applied fonts for language code `{entry.Key}`: {string.Join(", ", entry.Value.ToArray())}");
-        }
         // Determine language chosen on startup
         // read save data first, use save data settings if the language is loaded
         if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
@@ -337,6 +332,16 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
                 }
 
                 ModLog.Warn($"Saved font `{fontName}` not found for language `{compiledLang.languageName}`.");
+            }
+        }
+
+        // check every flag-triggered patch and apply the patch if the flag is set to true
+        foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnFlag))
+        {
+            if (Core.Events.GetFlag(patch.patchFlag))
+            {
+                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` because flag `{patch.patchFlag}` is already set.");
+                patch.OnFlagChange(patch.patchFlag);
             }
         }
     }
