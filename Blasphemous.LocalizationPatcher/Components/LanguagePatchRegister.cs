@@ -10,7 +10,7 @@ namespace Blasphemous.LocalizationPatcher.Components;
 public static class LanguagePatchRegister
 {
 
-    private static readonly List<LanguagePatch> _patches = new();
+    private static readonly List<LanguagePatch> _patches = [];
     internal static IEnumerable<LanguagePatch> Patches => _patches;
     internal static int Total => _patches.Count;
     internal static LanguagePatch AtIndex(int index) => _patches[index];
@@ -76,7 +76,7 @@ public static class LanguagePatchRegister
         // xModIndex == yModIndex
         // Mod order same, compare order within same mod
         // patch with bigger patch order is registered first
-        return (x.patchOrder.CompareTo(y.patchOrder)) * -1;
+        return x.patchOrder.CompareTo(y.patchOrder) * -1;
     }
 }
 

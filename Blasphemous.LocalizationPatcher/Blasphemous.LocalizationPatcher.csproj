@@ -8,8 +8,8 @@
     <Product>Localization Patcher</Product>
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
-    <Description>Allows this mod and other mods to customize vanilla localization texts of Blasphemous</Description>
-    <Version>1.1.1</Version>
+    <Description>Allows this mod and other mods to customize localization texts and fonts of Blasphemous</Description>
+    <Version>1.2.0</Version>
 
     <TargetName>LocalizationPatcher</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -20,9 +20,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blasphemous.CheatConsole" Version="1.0.1" />
+    <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
     <PackageReference Include="Blasphemous.GameLibs" Version="4.0.67" />
-    <PackageReference Include="Blasphemous.ModdingAPI" Version="2.4.1" />
+    <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
   </ItemGroup>
 
   <Target Name="Development" AfterTargets="PostBuildEvent">
@@ -33,7 +33,7 @@
     </PropertyGroup>
     <ItemGroup>
       <DataDlls Include="$(ResourcesFolder)data\*" />
-      <DataFiles Include="$(ResourcesFolder)data\$(Product)\*" />
+      <DataFiles Include="$(ResourcesFolder)data\$(Product)\**\*" />
       <Levels Include="$(ResourcesFolder)levels\$(Product)\*" />
       <Localization Include="$(ResourcesFolder)localization\*" />
     </ItemGroup>
@@ -44,7 +44,7 @@
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevFolder)plugins" />
     <Copy SourceFiles="@(DataDlls)" DestinationFolder="$(DevFolder)data" />
-    <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(DevFolder)data\$(Product)" />
+    <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles->'$(DevFolder)data\$(Product)\%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(Levels)" DestinationFolder="$(DevFolder)levels\$(Product)" />
     <Copy SourceFiles="@(Localization)" DestinationFolder="$(DevFolder)localization" />
 
@@ -54,7 +54,7 @@
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ExportFolder)plugins" />
     <Copy SourceFiles="@(DataDlls)" DestinationFolder="$(ExportFolder)data" />
-    <Copy SourceFiles="@(DataFiles)" DestinationFolder="$(ExportFolder)data\$(Product)" />
+    <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles->'$(ExportFolder)data\$(Product)\%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="@(Levels)" DestinationFolder="$(ExportFolder)levels\$(Product)" />
     <Copy SourceFiles="@(Localization)" DestinationFolder="$(ExportFolder)localization" />
     <ZipDirectory SourceDirectory="$(ExportFolder)" DestinationFile="$(ExportFolder)..\$(TargetName).zip" Overwrite="true" />

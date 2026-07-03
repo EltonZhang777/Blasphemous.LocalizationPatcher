@@ -1,7 +1,10 @@
 ﻿using Blasphemous.ModdingAPI;
+using Gameplay.UI;
 using I2.Loc;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
@@ -23,29 +26,41 @@ public class CompiledLanguage
     /// <summary>
     /// All the term keys of the language terms.
     /// </summary>
-    public List<string> termKeys = new();
+    public List<string> termKeys = [];
 
     /// <summary>
     /// All the prefixes of term contents of the language terms.
     /// </summary>
-    public List<string> termPrefixes = new();
+    public List<string> termPrefixes = [];
 
     /// <summary>
     /// All the central term contents of the language terms.
     /// </summary>
-    public List<string> termContents = new();
+    public List<string> termContents = [];
 
     /// <summary>
     /// All the suffixes of term contents of the language terms.
     /// </summary>
-    public List<string> termSuffixes = new();
+    public List<string> termSuffixes = [];
 
     /// <summary>
     /// All patches that are applied to this language, in chronological order
     /// </summary>
-    public List<string> patchesApplied = new();
+    public List<string> patchesApplied = [];
+
+    /// <summary>
+    /// All mod fonts that are applicable to this language
+    /// </summary>
+    public List<ModFont> modFonts = [];
+
+    /// <summary>
+    /// The original term contents of the language terms, before any patches are applied.
+    /// </summary>
+    private List<string> _originalTermContentsBackup = [];
 
     private int _languageIndex = -1;
+
+    internal bool IsVanillaLanguage => LocalizationPatcher.IsVanillaLanguage(languageName);
 
     /// <summary>
     /// Constructor of the CompiledLanguage class. 
@@ -59,9 +74,9 @@ public class CompiledLanguage
 
         termKeys = Main.LocalizationPatcher.allPossibleKeys;
         int keyCount = termKeys.Count;
-        termPrefixes = new(Enumerable.Repeat(string.Empty, keyCount));
-        termContents = new(Enumerable.Repeat(string.Empty, keyCount));
-        termSuffixes = new(Enumerable.Repeat(string.Empty, keyCount));
+        termPrefixes = [.. Enumerable.Repeat(string.Empty, keyCount)];
+        termContents = [.. Enumerable.Repeat(string.Empty, keyCount)];
+        termSuffixes = [.. Enumerable.Repeat(string.Empty, keyCount)];
     }
 
     /// <summary>
@@ -147,7 +162,8 @@ public class CompiledLanguage
     }
 
     /// <summary>
-    /// Write selected terms of CompiledLanguage object into Blasphemous
+    /// Write selected terms of CompiledLanguage object into Blasphemous,
+    /// then force localize the language to apply the updated terms.
     /// </summary>
     public void WriteTermsToGame(List<string> keys)
     {
@@ -160,7 +176,7 @@ public class CompiledLanguage
 
         // documenting whether a term isn't patched till the end due to its key being nonexistent.
         // true => this term has keyError
-        List<bool> keyErrorFlags = new List<bool>(Enumerable.Repeat(false, keys.Count));
+        List<bool> keyErrorFlags = [.. Enumerable.Repeat(false, keys.Count)];
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
@@ -196,6 +212,9 @@ public class CompiledLanguage
         {
             ModLog.Info($"Update process encountered no error.\n");
         }
+
+        // force localize the language in I2.Loc to apply the updated terms
+        RefreshLocalizationLanguage();
     }
 
     /// <summary>
@@ -214,12 +233,48 @@ public class CompiledLanguage
     }
 
     /// <summary>
+    /// Remove a specific patch from this language by resetting all terms to original,
+    /// then re-apply remaining patches in their original order.
+    /// </summary>
+    public void RemovePatchFromGame(string patchName)
+    {
+        if (!patchesApplied.Contains(patchName))
+        {
+            ModLog.Warn($"Cannot remove unapplied patch `{patchName}` from {languageName}!");
+            return;
+        }
+
+        // Save remaining patches in original order (excluding the one to remove)
+        List<string> remainingPatches = patchesApplied.Where(p => p != patchName).ToList();
+
+        // Clear applied patches list (will be rebuilt by re-compilation)
+        patchesApplied.Clear();
+
+        // Reset all term data to original backup
+        ResetTermsToOriginal();
+
+        // Re-apply remaining patches in their original order
+        foreach (string remainingPatchName in remainingPatches)
+        {
+            LanguagePatchRegister.AtName(remainingPatchName).CompileText();
+        }
+
+        // Write the final state to game
+        WriteAllTermsToGame();
+
+        // record change to save data
+        RecordRemovedPatch(patchName);
+
+        ModLog.Info($"Removed patch `{patchName}` from {languageName} and re-applied {remainingPatches.Count} remaining patches.");
+    }
+
+    /// <summary>
     /// Optimized implementation to write all patched terms to game
     /// </summary>
     public void WriteAllPatchesToGame()
     {
         // collect all modified term keys from all patches applied to this language
-        List<string> allModifiedTermKeys = new();
+        List<string> allModifiedTermKeys = [];
         foreach (string patchName in patchesApplied)
         {
             allModifiedTermKeys.AddRange(LanguagePatchRegister.AtName(patchName).patchTerms.Select(x => x.termKey));
@@ -235,7 +290,7 @@ public class CompiledLanguage
     /// </summary>
     public void WriteAllTermsToGame(bool forceWriteAll = false)
     {
-        if (!IsVanillaLanguage() || forceWriteAll) // if this is not a vanilla language, all terms must be written; if forceWriteAll is true, all terms must be written regardless of the language type
+        if (!IsVanillaLanguage || forceWriteAll) // if this is not a vanilla language or forceWriteAll is true, all terms must be written.
         {
             WriteTermsToGame(termKeys);
         }
@@ -287,6 +342,157 @@ public class CompiledLanguage
                 ModLog.Warn($"Error loading term {termKeys[i]} from language {languageName}");
             }
         }
+
+        // backup the original term contents
+        _originalTermContentsBackup = termContents.ToList();
+    }
+
+    /// <summary>
+    /// Restore the original terms of this language to game's localization
+    /// </summary>
+    public void RestoreOriginalTermsToGame()
+    {
+        ResetTermsToOriginal();
+        patchesApplied = [];
+        WriteAllTermsToGame();
+
+        // record change to save data
+        RemoveAllRecordedPatches();
+
+        ModLog.Info($"Restored original terms of {languageName} to game.");
+    }
+
+    /// <summary>
+    /// Reset all term data to original backup without writing to game or clearing patchesApplied.
+    /// </summary>
+    internal void ResetTermsToOriginal()
+    {
+        termContents = _originalTermContentsBackup.ToList();
+        termPrefixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
+        termSuffixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
+    }
+
+    #region Persistence recording methods
+
+    internal void RecordAppliedPatch(string patchName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedPatch(languageCode, patchName);
+    }
+
+    internal void RecordRemovedPatch(string patchName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAppliedPatch(languageCode, patchName);
+    }
+
+    internal void RemoveAllRecordedPatches()
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAllAppliedPatches(languageCode);
+    }
+
+    internal void RecordAppliedFont(string fontName)
+    {
+        // because applying a font overwrites the previous one, remove all previous fonts first.
+        RemoveAllRecordedFonts();
+
+        Main.LocalizationPatcher.globalPersistenceData.AddAppliedFont(languageCode, fontName);
+    }
+
+    internal void RecordRemovedFont(string fontName)
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAppliedFont(languageCode, fontName);
+    }
+
+    internal void RemoveAllRecordedFonts()
+    {
+        Main.LocalizationPatcher.globalPersistenceData.RemoveAllAppliedFonts(languageCode);
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Apply the specified font to this language
+    /// </summary>
+    public void ApplyFontToGame(ModFont modFont)
+    {
+        if (!modFonts.Contains(modFont))
+            return;
+
+        // if modded fonts not found, use vanilla fonts
+        string regularFontUsed;
+        if (modFont.ttfFont != null)
+        {
+            regularFontUsed = modFont.TtfAssetName;
+        }
+        else if (IsVanillaLanguage)
+        {
+            regularFontUsed = LocalizationPatcher.vanillaRegularFontNames[languageName];
+            ModLog.Error($"Modded regular font `{modFont?.TtfAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
+        }
+        else
+        {
+            regularFontUsed = "MajesticExtended_Pixel_Scroll";
+            ModLog.Error($"No default font found for language {languageName}, using default English font `{regularFontUsed}`.");
+        }
+
+        string tmpFontUsed;
+        if (modFont.tmpFont != null)
+        {
+            tmpFontUsed = modFont.TmpAssetName;
+        }
+        else if (IsVanillaLanguage)
+        {
+            tmpFontUsed = LocalizationPatcher.vanillaTmpFontNames[languageName];
+            ModLog.Error($"Modded TextMeshPro font `{modFont?.TmpAssetName}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
+        }
+        else
+        {
+            tmpFontUsed = "MajesticExtended_FullLatin";
+            ModLog.Error($"No default font found for language {languageName}, using default English font `{tmpFontUsed}`.");
+        }
+
+        // update the fonts to I2.Loc manager
+        TryUpdateTerm("UI/FONT", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm("UI/FONT_SCROLL", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm("UI/FONT_TEXTMESH_PRO", tmpFontUsed, PatchTerm.TermOperation.ReplaceAll);
+
+        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
+
+        // force localize the language in I2.Loc to apply the font
+        RefreshLocalizationLanguage();
+
+        // record change to save data
+        RecordAppliedFont(modFont.info.fontName);
+    }
+
+    /// <summary>
+    /// Apply specified system font (installed in the user's computer) to this language
+    /// </summary>
+    public void ApplySystemFontToGame(string fontName)
+    {
+        if (!Main.LocalizationPatcher.SystemFontManager.HasLoadedSystemFont(fontName))
+            return;
+
+        // update the fonts to I2.Loc manager
+        TryUpdateTerm("UI/FONT", fontName, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm("UI/FONT_SCROLL", fontName, PatchTerm.TermOperation.ReplaceAll);
+
+        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL"]);
+
+        // force localize the language in I2.Loc to apply the font
+        RefreshLocalizationLanguage();
+
+        // record change to save data
+        RecordAppliedFont(fontName);
+    }
+
+    /// <summary>
+    /// Get the fonts currently used by this language
+    /// </summary>
+    public void GetCurrentFonts(out string regularFontUsed, out string tmpFontUsed)
+    {
+        // get the current fonts used in I2.Loc
+        regularFontUsed = I2LocManager.GetTermData("UI/FONT").Languages[_languageIndex];
+        tmpFontUsed = I2LocManager.GetTermData("UI/FONT_TEXTMESH_PRO").Languages[_languageIndex];
     }
 
     /// <summary>
@@ -295,7 +501,7 @@ public class CompiledLanguage
     /// </summary>
     internal void UpdateLanguageIndex()
     {
-        var source = I2LocManager.Sources[0];
+        LanguageSource source = I2LocManager.Sources[0];
         int index = source.GetLanguageIndex(languageName);
         if (index == -1)
         {
@@ -312,8 +518,39 @@ public class CompiledLanguage
         termSuffixes[termIndex] = string.Empty;
     }
 
-    internal bool IsVanillaLanguage()
+    /// <summary>
+    /// Refresh current game language to update localization. 
+    /// </summary>
+    internal void RefreshLocalizationLanguage()
     {
-        return LocalizationPatcher.IsVanillaLanguage(languageName);
+        // if the game is NOT currently using the language being patched, it will be updated next time the player switch to this language, so nothing to do now.
+        if (I2LocManager.CurrentLanguage != languageName)
+            return;
+
+        Main.LogIfDebug($"Refreshing language `{languageName}` to update localization.");
+        // refresh current language by switching to another language and switch back
+        // determine the parent for executing coroutine. Use any MonoBehaviour as fallback for UIController.
+        MonoBehaviour coroutineParent = UIController.instance ?? UObject.FindObjectOfType<MonoBehaviour>();
+        if (I2LocManager.CurrentLanguage != "English")
+        {
+            // if current language isn't English, switch to English and switch back
+            coroutineParent.StartCoroutine(SwitchToTargetLanguageAndSwitchBack("English"));
+        }
+        else
+        {
+            // current language is English, switch to Chinese and switch back
+            coroutineParent.StartCoroutine(SwitchToTargetLanguageAndSwitchBack("Chinese"));
+        }
+    }
+
+    /// <summary>
+    /// Switch to target language and switch back to current language to refresh localization. 
+    /// </summary>
+    private IEnumerator SwitchToTargetLanguageAndSwitchBack(string targetLanguage)
+    {
+        yield return new WaitForEndOfFrame();
+        I2LocManager.SetLanguageAndCode(targetLanguage, I2LocManager.GetLanguageCode(targetLanguage), true, true);
+        yield return new WaitForEndOfFrame();
+        I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
     }
 }

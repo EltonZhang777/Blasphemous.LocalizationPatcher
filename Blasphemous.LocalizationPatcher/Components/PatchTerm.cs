@@ -113,7 +113,7 @@ public class PatchTerm
     /// </summary>
     public static TermOperation ParseToTermOperation(string input, bool ignoreCase = false)
     {
-        foreach (var kvp in _termOperationParseDict)
+        foreach (KeyValuePair<TermOperation, List<string>> kvp in _termOperationParseDict)
         {
             if (!ignoreCase)
             {

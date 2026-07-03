@@ -1,4 +1,6 @@
-﻿namespace Blasphemous.LocalizationPatcher.Events;
+﻿using Framework.Managers;
+
+namespace Blasphemous.LocalizationPatcher.Events;
 
 internal class EventHandler
 {
@@ -11,6 +13,7 @@ internal class EventHandler
 
     public void FlagChange(string flagId)
     {
+        flagId = flagId.Replace('_', ' ').ToUpper().Trim();
         OnFlagChange?.Invoke(flagId);
     }
 }

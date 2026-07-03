@@ -8,28 +8,23 @@ namespace Blasphemous.LocalizationPatcher;
 public class Config
 {
     /// <summary>
-    /// Langauge chosen when the game starts.
-    /// </summary>
-    public string languageOnStartup = "";
-
-    /// <summary>
     /// List of all loaded languages' order in the game's settings.
     /// </summary>
-    public List<string> languageOrder = new();
+    public List<string> languageOrder = [];
 
     /// <summary>
     /// List of all disabled languages' language names.
     /// </summary>
-    public List<string> disabledLanguages = new();
+    public List<string> disabledLanguages = [];
 
     /// <summary>
     /// List of patching order of all mods, from first to last.
     /// </summary>
-    public List<string> patchingModOrder = new();
+    public List<string> patchingModOrder = [];
 
     /// <summary>
     /// List of patches disabled in the config file
     /// </summary>
-    public List<string> disabledPatches = new();
+    public List<string> disabledPatches = [];
 
 }

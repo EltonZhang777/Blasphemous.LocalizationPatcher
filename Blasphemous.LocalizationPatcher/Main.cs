@@ -1,14 +1,17 @@
 ﻿global using I2LocManager = I2.Loc.LocalizationManager;
+//global using I2LocManager = I2.Loc.LocalizationManager;
 //global using BlasLocManager = Framework.Managers.LocalizationManager;
+global using UObject = UnityEngine.Object;
 
 using BepInEx;
+using Blasphemous.ModdingAPI;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Blasphemous.LocalizationPatcher;
 
 [BepInPlugin(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_VERSION)]
-[BepInDependency("Blasphemous.ModdingAPI", "2.4.1")]
+[BepInDependency("Blasphemous.ModdingAPI", "3.0.0")]
 [BepInDependency("Blasphemous.CheatConsole", "1.0.1")]
 internal class Main : BaseUnityPlugin
 {
@@ -42,5 +45,12 @@ internal class Main : BaseUnityPlugin
 
         // if orderList contains elements not in elementList, remove them
         orderList = orderList.Where(x => elementsList.Contains(x)).ToList();
+    }
+
+    internal static void LogIfDebug(string message)
+    {
+#if DEBUG
+        ModLog.Warn($"[DEBUG] {message}");
+#endif
     }
 }

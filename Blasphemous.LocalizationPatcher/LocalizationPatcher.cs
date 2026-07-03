@@ -1,25 +1,29 @@
-﻿using Blasphemous.CheatConsole;
+using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
+using Blasphemous.LocalizationPatcher.Extensions;
 using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Persistence;
 using Framework.Managers;
 using I2.Loc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Blasphemous.LocalizationPatcher;
 
-
-internal class LocalizationPatcher : BlasMod
+internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPersistenceData>
 {
+    internal L10NGlobalPersistenceData globalPersistenceData;
+
     /// <summary>
     /// all terms keys in Blasphemous' localization service `I2.Loc`.
     /// </summary>
-    internal List<string> allPossibleKeys = new();
+    internal List<string> allPossibleKeys = [];
 
-    internal List<CompiledLanguage> compiledLanguages = new();
+    internal List<CompiledLanguage> compiledLanguages = [];
     internal static readonly List<string> vanillaLanguageNames =
         [
         "Spanish",
@@ -33,7 +37,32 @@ internal class LocalizationPatcher : BlasMod
         "Portuguese (Brazil)",
         "Korean"
         ];
-
+    internal static readonly Dictionary<string, string> vanillaRegularFontNames = new()
+    {
+        { "Spanish", "MajesticExtended_Pixel_Scroll" },
+        { "English", "MajesticExtended_Pixel_Scroll" },
+        { "French", "MajesticExtended_Pixel_Scroll" },
+        { "German", "MajesticExtended_German" },
+        { "Italian", "MajesticExtended_Pixel_Scroll" },
+        { "Chinese", "MSJhengHei-cut" },
+        { "Russian", "RussianFont_Basis33" },
+        { "Japanese", "KH-Dot-Ningyouchou-16-cut" },
+        { "Portuguese (Brazil)", "MajesticExtended_Pixel_Scroll" },
+        { "Korean", "NeoDunggeunmo_korean_cut"}
+    };
+    internal static readonly Dictionary<string, string> vanillaTmpFontNames = new()
+    {
+        { "Spanish", "MajesticExtended_FullLatin" },
+        { "English", "MajesticExtended_FullLatin" },
+        { "French", "MajesticExtended_FullLatin" },
+        { "German", "MajesticExtended_GermanPro" },
+        { "Italian", "MajesticExtended_FullLatin" },
+        { "Chinese", "MSJhengHei-cutPro" },
+        { "Russian", "RussianFont_Basis33_exported" },
+        { "Japanese", "KH-Dot-Ningyouchou-16-cutPro" },
+        { "Portuguese (Brazil)", "MajesticExtended_FullLatin" },
+        { "Korean", "NeoDunggeunmo_korean_cutPro"}
+    };
     private readonly string _debugPatchFileName = "Debug_patch_localization_key_display.json";
     private LanguagePatch _debugPatch;
     private bool _firstMainMenuEnterFlag = true;
@@ -45,6 +74,8 @@ internal class LocalizationPatcher : BlasMod
     internal Config config { get; private set; }
 
     internal EventHandler EventHandler { get; } = new();
+
+    internal SystemFontManager SystemFontManager { get; private set; } = new();
 
     internal LocalizationPatcher() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
 
@@ -69,44 +100,40 @@ internal class LocalizationPatcher : BlasMod
         // register commands
         List<ModCommand> commands =
             [
-            new LanguagePatchCommand()
+            new LanguagePatchCommand(),
+            new ModFontCommand(),
             ];
         foreach (ModCommand command in commands)
         {
             provider.RegisterCommand(command);
         }
 
+        // register all patches in the `auto-load language patches` folder under data path
+        string autoLoadPatchesPath = Path.Combine(FileHandler.GetDataPath(), "auto-load language patches");
+        if (Directory.Exists(autoLoadPatchesPath))
+        {
+            foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.json"))
+            {
+                string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
+                FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
+                provider.RegisterLanguagePatch(autoPatch);
+            }
+        }
+
 #if DEBUG
-        // load the debug test patch
+        // load debug test patch
         provider.RegisterLanguagePatch(_debugPatch);
 
-        // text-based import test
-        provider.RegisterLanguagePatch(new LanguagePatch(
-            "Debug_patch_addition_patch",
-            "KeyDisplay",
-            "kd",
-            "UI_Map/LABEL_MENU_LANGUAGENAME -> AppendAtBeginning : test_",
-            LanguagePatch.PatchType.Manually));
-
-        // (de)serialization test
-        /*
-        ModLog.Info($"Start serializing LanguagePatch");
-        File.WriteAllText(
-            FileHandler.ContentFolder + @"test_patch.json",
-            JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
-
-        ModLog.Info($"Start deserializing to LanguagePatch");
-        LanguagePatch deserializedPatch = JsonConvert.DeserializeObject<LanguagePatch>(
-            JsonConvert.SerializeObject(debugPatch, Formatting.Indented));
-        string reserializedJson = JsonConvert.SerializeObject(deserializedPatch, Formatting.Indented);
-        File.WriteAllText(
-            FileHandler.ContentFolder + @"reserialized_patch.json",
-            reserializedJson);
-        ModLog.Info($"json equal after reserialization? {reserializedJson.Equals(JsonConvert.SerializeObject(debugPatch, Formatting.Indented))}");
-        */
+        // load debug font
+        List<string> debugFontNames =
+            [
+            //"vonwaonbitmap-12px",
+            "vonwaonbitmap-16px",
+            //"ms-yahei",
+            ];
+        debugFontNames.ForEach(x => provider.RegisterModFont(new ModFont(FileHandler, $"{x}.json")));
 #endif
     }
-
 
     protected override void OnAllInitialized()
     {
@@ -135,8 +162,8 @@ internal class LocalizationPatcher : BlasMod
         ModLog.Info($"Successfully removed {removedLanguageCount} languages from game.");
 
         // Create CompiledLanguage objects of remaining vanilla languages
-        List<string> allLanguageNames = new();
-        List<string> allLanguageCodes = new();
+        List<string> allLanguageNames = [];
+        List<string> allLanguageCodes = [];
         GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
         foreach (string langName in allLanguageNames)
         {
@@ -218,43 +245,29 @@ internal class LocalizationPatcher : BlasMod
 #if DEBUG
         // display all current languages into log
         GetAllLanguageNamesAndCodes(ref allLanguageNames, ref allLanguageCodes);
-        ModLog.Info($"Final summary of all loaded languages:");
+        StringBuilder sb = new();
+        sb.AppendLine($"Final summary of all loaded languages:");
         int numCurrentLanguages = allLanguageNames.Count;
         for (int i = 0; i < numCurrentLanguages; i++)
         {
-            ModLog.Info($"\nlanguage #{i + 1} : \n" +
-                $"language name: {allLanguageNames[i]}\n" +
-                $"language code: {allLanguageCodes[i]}");
+            sb.AppendLine($"  Language #{i + 1} :");
+            sb.AppendLine($"    language name: {allLanguageNames[i]}");
+            sb.AppendLine($"    language code: {allLanguageCodes[i]}");
             int currentPatchCount = 0;
             foreach (string patchName in compiledLanguages.Find(l => l.languageName == allLanguageNames[i]).patchesApplied)
             {
                 currentPatchCount++;
-                ModLog.Info($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
+                sb.AppendLine($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
             }
         }
+        Main.LogIfDebug(sb.ToString());
 #endif
 
-        // Determine language chosen on startup
-        // read config first, use config settings if the language is loaded
-        if (string.IsNullOrEmpty(config.languageOnStartup)
-            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(config.languageOnStartup)))
+        // Hook all ModFont objects to CompiledLanguage objects
+        foreach (ModFont modFont in ModFontRegister.ModFonts)
         {
-            // if not set or does not exist, use the stored language in game settings
-            config.languageOnStartup = _selectedLangaugeInOptions;
-
-            if (string.IsNullOrEmpty(config.languageOnStartup)
-            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(config.languageOnStartup)))
-            {
-                // if language in settings does not exist, default to English
-                config.languageOnStartup = "English";
-            }
-            ModLog.Info($"No language on startup set in config, using language: {config.languageOnStartup}");
+            modFont.AttachFontToLanguages();
         }
-        else
-        {
-            ModLog.Info($"Using language on startup from config: {config.languageOnStartup}");
-        }
-        // actual language setting is done when loading main menu
 
         // final config save
         ConfigHandler.Save<Config>(config);
@@ -262,20 +275,103 @@ internal class LocalizationPatcher : BlasMod
 
     protected override void OnLevelLoaded(string oldLevel, string newLevel)
     {
-        // Restore langauge option to the user-selected langauge after entering main menu for the first time
         if (newLevel.Equals("MainMenu") && _firstMainMenuEnterFlag)
         {
             _firstMainMenuEnterFlag = false;
-            I2LocManager.CurrentLanguage = config.languageOnStartup;
+            OnLoadMainMenuFirstTime();
         }
 
+        // entering game level from main menu
+        if (!newLevel.Equals("MainMenu") && oldLevel.Equals("MainMenu"))
+        {
+            OnEnterSaveFromMainMenu();
+        }
     }
 
-    protected override void OnDispose()
+    /// <summary>
+    /// Executes when the game enters the main menu for the first time. 
+    /// Useful for treating processes requiring saveData because it is read after <c>OnAllInitialized</c>.
+    /// </summary>
+    private void OnLoadMainMenuFirstTime()
     {
-        // store current selected langauge to config for startup next time
-        config.languageOnStartup = I2LocManager.CurrentLanguage;
-        ConfigHandler.Save<Config>(config);
+        // Determine language chosen on startup
+        // read save data first, use save data settings if the language is loaded
+        if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
+            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(globalPersistenceData.languageOnStartup)))
+        {
+            // if not set or does not exist, use the stored language in game settings
+            globalPersistenceData.languageOnStartup = _selectedLangaugeInOptions;
+
+            if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
+            || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(globalPersistenceData.languageOnStartup)))
+            {
+                // if language in settings does not exist, default to English
+                globalPersistenceData.languageOnStartup = "English";
+            }
+            ModLog.Info($"No language on startup set in save data, using language: {globalPersistenceData.languageOnStartup}");
+        }
+        else
+        {
+            ModLog.Info($"Using language on startup from save data: {globalPersistenceData.languageOnStartup}");
+        }
+
+        // Restore langauge option to the user-selected langauge after entering main menu for the first time
+        I2LocManager.CurrentLanguage = globalPersistenceData.languageOnStartup;
+
+        // Restore all saved fonts from persistence data
+        ModLog.Info("Restoring saved fonts...");
+        foreach (KeyValuePair<string, List<string>> entry in globalPersistenceData.languageCodeToAppliedFonts.ToList())
+        {
+            Main.LogIfDebug($"Restoring saved fonts for language code `{entry.Key}`...");
+            string languageCode = entry.Key;
+            foreach (string fontName in entry.Value.ToList())
+            {
+                CompiledLanguage compiledLang = compiledLanguages.FirstOrDefault(x => x.languageCode == languageCode);
+                if (compiledLang == null)
+                {
+                    ModLog.Warn($"Language code `{languageCode}` not found when restoring saved font `{fontName}`.");
+                    continue;
+                }
+
+                // Try restoring as a mod font
+                ModFont modFont = ModFontRegister.ModFonts.FirstOrDefault(x => x.info.fontName == fontName);
+                if (modFont != null)
+                {
+                    ModLog.Info($"Restoring saved mod font `{fontName}` to `{compiledLang.languageName}`.");
+                    compiledLang.ApplyFontToGame(modFont);
+                    continue;
+                }
+
+                // Try restoring as a system font
+                if (SystemFontManager.HasSystemFont(fontName))
+                {
+                    ModLog.Info($"Restoring saved system font `{fontName}` to `{compiledLang.languageName}`.");
+                    SystemFontManager.TryApplySystemFont(fontName, compiledLang.languageName);
+                    continue;
+                }
+
+                ModLog.Warn($"Saved font `{fontName}` not found for language `{compiledLang.languageName}`.");
+            }
+        }
+    }
+
+    private void OnEnterSaveFromMainMenu()
+    {
+        // check every flag-triggered patch and apply the patch if the flag is set to true
+        foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnFlag))
+        {
+            Main.LogIfDebug($"Checking flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`: {Core.Events.GetFlag(patch.patchFlag)}");
+            if (Core.Events.GetFlag(patch.patchFlag))
+            {
+                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
+                patch.OnFlagChange(patch.patchFlag);
+            }
+            else
+            {
+                ModLog.Info($"Deactivating flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
+                patch.OnFlagChange(patch.patchFlag);
+            }
+        }
     }
 
     internal CompiledLanguage RegisterCompiledLanguageObject(string langName, string langCode)
@@ -320,6 +416,17 @@ internal class LocalizationPatcher : BlasMod
         return vanillaLanguageNames.Contains(langName);
     }
 
-}
+    public L10NGlobalPersistenceData SaveGlobal()
+    {
+        // store current selected langauge to saveData for startup next time
+        globalPersistenceData.languageOnStartup = I2LocManager.CurrentLanguage;
 
+        return globalPersistenceData;
+    }
+
+    public void LoadGlobal(L10NGlobalPersistenceData data)
+    {
+        globalPersistenceData = data;
+    }
+}
 

@@ -7,7 +7,6 @@ using System.Collections.Generic;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
-
 /// <summary>
 /// contains the basic information of a localization patch
 /// </summary>
@@ -54,7 +53,7 @@ public class LanguagePatch
     /// All the patch terms of this patch
     /// </summary>
     [JsonProperty]
-    public List<PatchTerm> patchTerms = new();
+    public List<PatchTerm> patchTerms = [];
 
     internal bool isApplied = false;
 
@@ -269,16 +268,42 @@ public class LanguagePatch
     }
 
     /// <summary>
-    /// Apply the patch to game when the corresponding flag is set to true
+    /// Apply the patch to game when the corresponding flag is set to true, remove patch when flag is set to false.
     /// </summary>
-    protected void OnFlagChange(string flagId)
+    protected internal void OnFlagChange(string flagId)
     {
+        patchFlag = patchFlag.Replace('_', ' ').ToUpper().Trim();
+
         if (flagId != patchFlag)
             return;
-        if (Core.Events.GetFlag(flagId) == false)
-            return;
 
-        CompileText();
-        CompiledLanguage.WriteAllTermsToGame();
+        if (Core.Events.GetFlag(flagId))
+        {
+            // Flag is set to true: apply the patch
+            Main.LogIfDebug($"Flag `{flagId}` is set to true, applying patch `{patchName}`.");
+            if (isApplied)
+            {
+                ModLog.Warn($"Patch `{patchName}` is already applied.");
+                return;
+            }
+
+            CompileText();
+            CompiledLanguage.WriteAllTermsToGame();
+            CompiledLanguage.RecordAppliedPatch(patchName);
+            isApplied = true;
+        }
+        else
+        {
+            // Flag is set to false: remove the patch
+            Main.LogIfDebug($"Flag `{flagId}` is set to false, removing patch `{patchName}`.");
+            if (!CompiledLanguage.patchesApplied.Contains(patchName))
+            {
+                ModLog.Warn($"Patch `{patchName}` is not applied, cannot remove.");
+                return;
+            }
+
+            CompiledLanguage.RemovePatchFromGame(patchName);
+            isApplied = false;
+        }
     }
 }
