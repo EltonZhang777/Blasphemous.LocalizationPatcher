@@ -1,5 +1,5 @@
-﻿using Blasphemous.LocalizationPatcher.Components;
-using Blasphemous.LocalizationPatcher.Extensions;
+using Blasphemous.LocalizationPatcher.Components;
+using Blasphemous.NewbieEltonLibs.Extensions.GameLibs;
 using HarmonyLib;
 using I2.Loc;
 using System.Linq;

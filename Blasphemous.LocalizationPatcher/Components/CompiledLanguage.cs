@@ -1,4 +1,5 @@
-﻿using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Gameplay.UI;
 using I2.Loc;
 using System.Collections;
@@ -527,7 +528,7 @@ public class CompiledLanguage
         if (I2LocManager.CurrentLanguage != languageName)
             return;
 
-        Main.LogIfDebug($"Refreshing language `{languageName}` to update localization.");
+        ModLogExtensions.WarnIfDebugBuild($"Refreshing language `{languageName}` to update localization.");
         // refresh current language by switching to another language and switch back
         // determine the parent for executing coroutine. Use any MonoBehaviour as fallback for UIController.
         MonoBehaviour coroutineParent = UIController.instance ?? UObject.FindObjectOfType<MonoBehaviour>();

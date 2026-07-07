@@ -1,4 +1,4 @@
-﻿using Blasphemous.LocalizationPatcher.Extensions;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Files;
 using System.Collections.Generic;
@@ -53,7 +53,7 @@ public class ModFont
             throw new System.ArgumentException(errMsg);
         }
 
-        Main.LogIfDebug($"Loading assetBundle!");
+        ModLogExtensions.WarnIfDebugBuild($"Loading assetBundle!");
 #if DEBUG
         StringBuilder sb = new();
         sb.AppendLine($"All assets in AssetBundle {ab.name}: ");
@@ -62,7 +62,7 @@ public class ModFont
             sb.AppendLine($"  asset name: `{asset.name}`; asset type: `{asset.GetType()}`");
         }
         sb.AppendLine();
-        Main.LogIfDebug(sb.ToString());
+        ModLogExtensions.WarnIfDebugBuild(sb.ToString());
 #endif
 
         // load ttf assets

@@ -1,4 +1,4 @@
-﻿global using I2LocManager = I2.Loc.LocalizationManager;
+global using I2LocManager = I2.Loc.LocalizationManager;
 //global using I2LocManager = I2.Loc.LocalizationManager;
 //global using BlasLocManager = Framework.Managers.LocalizationManager;
 global using UObject = UnityEngine.Object;
@@ -45,12 +45,5 @@ internal class Main : BaseUnityPlugin
 
         // if orderList contains elements not in elementList, remove them
         orderList = orderList.Where(x => elementsList.Contains(x)).ToList();
-    }
-
-    internal static void LogIfDebug(string message)
-    {
-#if DEBUG
-        ModLog.Warn($"[DEBUG] {message}");
-#endif
     }
 }

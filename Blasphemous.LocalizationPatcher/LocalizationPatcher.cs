@@ -2,7 +2,7 @@ using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
-using Blasphemous.LocalizationPatcher.Extensions;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Persistence;
 using Framework.Managers;
@@ -260,7 +260,7 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
                 sb.AppendLine($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
             }
         }
-        Main.LogIfDebug(sb.ToString());
+        ModLogExtensions.WarnIfDebugBuild(sb.ToString());
 #endif
 
         // Hook all ModFont objects to CompiledLanguage objects
@@ -322,7 +322,7 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         ModLog.Info("Restoring saved fonts...");
         foreach (KeyValuePair<string, List<string>> entry in globalPersistenceData.languageCodeToAppliedFonts.ToList())
         {
-            Main.LogIfDebug($"Restoring saved fonts for language code `{entry.Key}`...");
+            ModLogExtensions.WarnIfDebugBuild($"Restoring saved fonts for language code `{entry.Key}`...");
             string languageCode = entry.Key;
             foreach (string fontName in entry.Value.ToList())
             {
@@ -360,7 +360,7 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // check every flag-triggered patch and apply the patch if the flag is set to true
         foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnFlag))
         {
-            Main.LogIfDebug($"Checking flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`: {Core.Events.GetFlag(patch.patchFlag)}");
+            ModLogExtensions.WarnIfDebugBuild($"Checking flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`: {Core.Events.GetFlag(patch.patchFlag)}");
             if (Core.Events.GetFlag(patch.patchFlag))
             {
                 ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
