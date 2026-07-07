@@ -8,7 +8,7 @@
 - Supports changing fonts of displayed languages using system fonts & self-built font AssetBundles.
 - Supports customizing language appearance order/toggle (as appeared in the "Settings" tab of Blasphemous) in configle file
 
-## Usage and Tutorial can be found here -> [tutorial doc](docs/tutorial.md)
+## Usage and Tutorial can be found [here](docs/tutorial.md)
 
 ## Bug report
 
