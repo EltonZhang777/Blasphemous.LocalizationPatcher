@@ -1,4 +1,5 @@
-﻿using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Framework.Managers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -280,7 +281,7 @@ public class LanguagePatch
         if (Core.Events.GetFlag(flagId))
         {
             // Flag is set to true: apply the patch
-            Main.LogIfDebug($"Flag `{flagId}` is set to true, applying patch `{patchName}`.");
+            ModLogExtensions.WarnIfDebugBuild($"Flag `{flagId}` is set to true, applying patch `{patchName}`.");
             if (isApplied)
             {
                 ModLog.Warn($"Patch `{patchName}` is already applied.");
@@ -295,7 +296,7 @@ public class LanguagePatch
         else
         {
             // Flag is set to false: remove the patch
-            Main.LogIfDebug($"Flag `{flagId}` is set to false, removing patch `{patchName}`.");
+            ModLogExtensions.WarnIfDebugBuild($"Flag `{flagId}` is set to false, removing patch `{patchName}`.");
             if (!CompiledLanguage.patchesApplied.Contains(patchName))
             {
                 ModLog.Warn($"Patch `{patchName}` is not applied, cannot remove.");
