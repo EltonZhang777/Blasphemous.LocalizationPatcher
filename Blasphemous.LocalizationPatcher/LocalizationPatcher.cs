@@ -2,9 +2,9 @@ using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
-using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Persistence;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace Blasphemous.LocalizationPatcher;
 
 internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPersistenceData>
 {
-    internal L10NGlobalPersistenceData globalPersistenceData;
+    internal L10NGlobalPersistenceData globalPersistenceData = new();
 
     /// <summary>
     /// all terms keys in Blasphemous' localization service `I2.Loc`.

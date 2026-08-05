@@ -4,7 +4,6 @@ global using I2LocManager = I2.Loc.LocalizationManager;
 global using UObject = UnityEngine.Object;
 
 using BepInEx;
-using Blasphemous.ModdingAPI;
 using System.Collections.Generic;
 using System.Linq;
 

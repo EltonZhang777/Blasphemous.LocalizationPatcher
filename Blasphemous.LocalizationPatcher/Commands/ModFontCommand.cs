@@ -147,7 +147,7 @@ internal class ModFontCommand : ModCommand
         if (!ValidateParameterList(parameters, 2))
             return;
 
-        string fontName = parameters[0];
+        string fontName = parameters[0].Replace("_", " ");
         string languageName = parameters[1].Replace("_", " ");
 
         // validate font and language's existence
