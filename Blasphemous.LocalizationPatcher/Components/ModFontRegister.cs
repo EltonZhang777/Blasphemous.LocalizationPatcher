@@ -36,6 +36,13 @@ public static class ModFontRegister
         if (provider == null)
             return;
 
+        // skip fonts that failed to load their assets (e.g. AssetBundle has no Font asset)
+        if (modFont.ttfFont == null)
+        {
+            ModLog.Error($"Skipping mod font `{modFont?.info?.fontName}` because it has no valid Font asset.");
+            return;
+        }
+
         // prevents repeated registering
         string name = modFont.info.fontName;
         if (_modFonts.Any(x => x.info.fontName == name))

@@ -145,12 +145,18 @@ public class CompiledLanguage
     /// <param name="termKey">Key of the term that needs to be updated</param>
     public bool TryWriteTermToGame(string termKey)
     {
+        int index = termKeys.IndexOf(termKey);
+        if (index < 0)
+        {
+            ModLog.Warn($"Term key `{termKey}` is not registered in compiled language `{languageName}`, skipping this term.");
+            return false;
+        }
+
         bool result = false;
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
-            int index = termKeys.IndexOf(termKey);
             if (allAvailableTerms.Contains(termKey))
             {
                 result = true;
@@ -308,12 +314,18 @@ public class CompiledLanguage
     /// <param name="termKey">Key of the term that needs to be updated</param>
     public bool TryReadTermFromGame(string termKey)
     {
+        int index = termKeys.IndexOf(termKey);
+        if (index < 0)
+        {
+            ModLog.Warn($"Term key `{termKey}` is not registered in compiled language `{languageName}`, skipping this term.");
+            return false;
+        }
+
         bool result = false;
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
-            int index = termKeys.IndexOf(termKey);
             if (allAvailableTerms.Contains(termKey))
             {
                 termContents[index] = source.GetTermData(termKey).Languages[_languageIndex];
@@ -355,7 +367,10 @@ public class CompiledLanguage
     {
         ResetTermsToOriginal();
         patchesApplied = [];
-        WriteAllTermsToGame();
+        // vanilla languages only write patched terms by default; since patchesApplied is now
+        // cleared there are no patched terms left, so force-write ALL terms (which now contain
+        // the restored original contents) to actually revert the game's localization.
+        WriteAllTermsToGame(forceWriteAll: true);
 
         // record change to save data
         RemoveAllRecordedPatches();

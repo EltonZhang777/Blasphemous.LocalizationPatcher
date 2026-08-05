@@ -84,15 +84,20 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // load config
         config = ConfigHandler.Load<Config>();
 
-        if (!File.Exists(Path.GetFullPath(FileHandler.ModdingFolder + "data/" + base.Name + @"/" + _debugPatchFileName)))
+        // The debug patch file doubles as the term-key index for all languages, which speeds up
+        // key lookup. It is not required for the mod to function: if missing, all term keys are
+        // enumerated dynamically from I2.Loc sources in OnAllInitialized instead.
+        string debugPatchFullPath = Path.Combine(Path.Combine(Path.Combine(FileHandler.ModdingFolder, "data"), Name), _debugPatchFileName);
+        if (File.Exists(debugPatchFullPath))
         {
-            string errorMessage = $"debug patch not found!";
-            ModLog.Error(errorMessage);
-            throw new FileNotFoundException(errorMessage);
+            FileHandler.LoadDataAsJson<LanguagePatch>(_debugPatchFileName, out _debugPatch);
+            allPossibleKeys = _debugPatch.patchTerms.Select(x => x.termKey).Distinct().ToList();
+            ModLog.Info($"Loaded {allPossibleKeys.Count} term keys from debug patch file.");
         }
-
-        FileHandler.LoadDataAsJson<LanguagePatch>(_debugPatchFileName, out _debugPatch);
-        allPossibleKeys = _debugPatch.patchTerms.Select(x => x.termKey).Distinct().ToList();
+        else
+        {
+            ModLog.Warn($"Debug patch file `{_debugPatchFileName}` not found, falling back to dynamic key enumeration.");
+        }
     }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
@@ -122,7 +127,10 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
 
 #if DEBUG
         // load debug test patch
-        provider.RegisterLanguagePatch(_debugPatch);
+        if (_debugPatch != null)
+        {
+            provider.RegisterLanguagePatch(_debugPatch);
+        }
 
         // load debug font
         List<string> debugFontNames =
@@ -138,6 +146,21 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
     protected override void OnAllInitialized()
     {
         ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches from all mod registers");
+
+        // If the debug patch file was missing during OnInitialize, enumerate all term keys
+        // from I2.Loc sources so that key lookups still work. Must run before any
+        // CompiledLanguage object is constructed (they share the allPossibleKeys list).
+        if (allPossibleKeys.Count == 0)
+        {
+            ModLog.Info("Debug patch file missing, enumerating term keys from I2.Loc sources...");
+            List<string> enumeratedKeys = [];
+            foreach (LanguageSource source in I2LocManager.Sources)
+            {
+                enumeratedKeys.AddRange(source.GetTermsList());
+            }
+            allPossibleKeys.AddRange(enumeratedKeys.Distinct());
+            ModLog.Info($"Enumerated {allPossibleKeys.Count} term keys from I2.Loc sources.");
+        }
 
         // store the language selected by the player in settings, so that it can be restored after patching completes
         _selectedLangaugeInOptions = I2LocManager.CurrentLanguage;

@@ -67,6 +67,11 @@ public class ModFont
 
         // load ttf assets
         ttfFont = ab.LoadAllAssets<Font>().FirstOrDefault();
+        if (ttfFont == null)
+        {
+            ModLog.Error($"No Font asset found in AssetBundle `{info.fileName}` for mod font `{info.fontName}`. Skipping this font.");
+            return;
+        }
         ttfFont.name = TtfAssetName;
 
         //// load tmp asset
