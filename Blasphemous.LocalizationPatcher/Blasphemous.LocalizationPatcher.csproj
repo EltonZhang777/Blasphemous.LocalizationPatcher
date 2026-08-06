@@ -39,9 +39,12 @@
       <Localization Include="$(ResourcesFolder)localization\*" />
     </ItemGroup>
 
-    <!-- Copy plugin & resources to development folder -->
+    <!-- Development copy destination.
+         Hardcoded to a typical local Steam install by default, but can be overridden with:
+           msbuild -p:DevFolder="C:\path\to\Blasphemous\Modding\"
+         or by setting the DevFolder property in a Directory.Build.props / user-level MSBuild file. -->
     <PropertyGroup>
-      <DevFolder>C:\Program Files (x86)\Steam\steamapps\common\Blasphemous\Modding\</DevFolder>
+      <DevFolder Condition="'$(DevFolder)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Blasphemous\Modding\</DevFolder>
     </PropertyGroup>
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevFolder)plugins" />
     <Copy SourceFiles="@(DataDlls)" DestinationFolder="$(DevFolder)data" />

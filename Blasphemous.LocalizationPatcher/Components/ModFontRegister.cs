@@ -27,6 +27,19 @@ public static class ModFontRegister
     }
 
     /// <summary>
+    /// Unload all registered mod fonts, releasing their AssetBundles and loaded assets,
+    /// then clears the registry. Call this when the mod is being unloaded.
+    /// </summary>
+    internal static void UnloadAll()
+    {
+        foreach (ModFont modFont in _modFonts.ToList())
+        {
+            modFont.Unload();
+        }
+        _modFonts.Clear();
+    }
+
+    /// <summary>
     /// Registers a new ModFont 
     /// </summary>
     public static void RegisterModFont(

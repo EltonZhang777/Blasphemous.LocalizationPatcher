@@ -261,8 +261,14 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // Write all modified terms in CompiledLanguage objects into the game by the assigned order.
         foreach (string langName in config.languageOrder)
         {
+            CompiledLanguage compiledLang = compiledLanguages.Find(l => l.languageName == langName);
+            if (compiledLang == null)
+            {
+                ModLog.Warn($"Language `{langName}` from `languageOrder` config not found among compiled languages, skipping.");
+                continue;
+            }
             // force write all if needRemoveVanillaLanguages is true
-            compiledLanguages.Find(l => l.languageName == langName).WriteAllTermsToGame(needRemoveVanillaLanguages);
+            compiledLang.WriteAllTermsToGame(needRemoveVanillaLanguages);
         }
 
 #if DEBUG
@@ -277,7 +283,10 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
             sb.AppendLine($"    language name: {allLanguageNames[i]}");
             sb.AppendLine($"    language code: {allLanguageCodes[i]}");
             int currentPatchCount = 0;
-            foreach (string patchName in compiledLanguages.Find(l => l.languageName == allLanguageNames[i]).patchesApplied)
+            CompiledLanguage compiledLang = compiledLanguages.Find(l => l.languageName == allLanguageNames[i]);
+            if (compiledLang == null)
+                continue;
+            foreach (string patchName in compiledLang.patchesApplied)
             {
                 currentPatchCount++;
                 sb.AppendLine($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");

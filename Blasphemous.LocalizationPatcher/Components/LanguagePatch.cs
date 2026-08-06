@@ -174,6 +174,7 @@ public class LanguagePatch
     {
         int nearEmptyTermCount = 0;
         int valueEmptyTermCount = 0;
+        int malformedTermCount = 0;
         string[] rawTextSplit = rawText.Split('\n');
 
         foreach (string line in rawTextSplit)
@@ -187,14 +188,34 @@ public class LanguagePatch
             }
 
             // split each line into operation key, operationType, and value.
+            // missing or misplaced separators are reported and skipped instead of crashing.
             string operationSeparator = "->";
             string valueSeparator = ":";
             int operationBeginIndex = line.IndexOf(operationSeparator);
-            int valueBeginIndex = line.IndexOf(valueSeparator, operationBeginIndex + operationSeparator.Length);
+            int valueBeginIndex = operationBeginIndex < 0
+                ? -1
+                : line.IndexOf(valueSeparator, operationBeginIndex + operationSeparator.Length);
 
-            string key = line.Substring(0, operationBeginIndex - 0).Trim();
+            if (operationBeginIndex < 0 || valueBeginIndex < 0
+                || valueBeginIndex <= operationBeginIndex + operationSeparator.Length)
+            {
+                ModLog.Warn($"Skipping malformed term line `{line}`: expected format `[key] -> [operation] : [value]`.");
+                malformedTermCount++;
+                continue;
+            }
+
+            string key = line.Substring(0, operationBeginIndex).Trim();
             string operationType = line.Substring(operationBeginIndex + operationSeparator.Length, valueBeginIndex - (operationBeginIndex + operationSeparator.Length)).Trim();
-            string value = line.Substring(valueBeginIndex + valueSeparator.Length).Trim().Replace('@', '\n');
+            // `@@` escapes a literal `@`; a single `@` is converted to a newline (legacy txt patch format).
+            string value = line.Substring(valueBeginIndex + valueSeparator.Length).Trim()
+                .Replace("@@", "\u0000").Replace('@', '\n').Replace("\u0000", "@");
+
+            if (key.Length == 0)
+            {
+                ModLog.Warn($"Skipping term line `{line}`: empty term key.");
+                malformedTermCount++;
+                continue;
+            }
 
             // load key, operationType, and value into corresponding lists
             if (value != string.Empty)
@@ -209,9 +230,10 @@ public class LanguagePatch
             }
         }
         ModLog.Info($"Successfully loaded {patchTerms.Count} of {rawTextSplit.Length} terms of {languageName} for patch `{patchName}`");
-        if (nearEmptyTermCount + valueEmptyTermCount > 0)
+        if (nearEmptyTermCount + valueEmptyTermCount + malformedTermCount > 0)
         {
-            ModLog.Warn($"Skipped {nearEmptyTermCount} near-empty terms " +
+            ModLog.Warn($"Skipped {nearEmptyTermCount} near-empty terms, " +
+                $"{malformedTermCount} malformed terms, " +
                 $"and {valueEmptyTermCount} terms with empty values\n");
         }
         else
