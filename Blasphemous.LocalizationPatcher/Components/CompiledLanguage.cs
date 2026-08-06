@@ -365,12 +365,25 @@ public class CompiledLanguage
     /// </summary>
     public void RestoreOriginalTermsToGame()
     {
+        // collect all term keys modified by the applied patches BEFORE clearing the list,
+        // so that only those terms are reverted. Fonts (e.g. UI/FONT) applied separately
+        // are left untouched.
+        List<string> allModifiedTermKeys = [];
+        foreach (string patchName in patchesApplied)
+        {
+            LanguagePatch patch = LanguagePatchRegister.AtName(patchName);
+            if (patch == null)
+            {
+                ModLog.Warn($"Patch `{patchName}` not found in registry when restoring {languageName}!");
+                continue;
+            }
+            allModifiedTermKeys.AddRange(patch.patchTerms.Select(x => x.termKey));
+        }
+        allModifiedTermKeys = allModifiedTermKeys.Distinct().ToList();
+
         ResetTermsToOriginal();
         patchesApplied = [];
-        // vanilla languages only write patched terms by default; since patchesApplied is now
-        // cleared there are no patched terms left, so force-write ALL terms (which now contain
-        // the restored original contents) to actually revert the game's localization.
-        WriteAllTermsToGame(forceWriteAll: true);
+        WriteTermsToGame(allModifiedTermKeys);
 
         // record change to save data
         RemoveAllRecordedPatches();
@@ -383,7 +396,12 @@ public class CompiledLanguage
     /// </summary>
     internal void ResetTermsToOriginal()
     {
-        termContents = _originalTermContentsBackup.ToList();
+        // The backup may be empty or shorter than termKeys for languages that were dynamically
+        // created by patches and never read from the game. Pad with empty contents so that
+        // parallel lists always match termKeys.Count and termContents[index] never throws.
+        termContents = _originalTermContentsBackup.Count == termKeys.Count
+            ? _originalTermContentsBackup.ToList()
+            : [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
         termPrefixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
         termSuffixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
     }
