@@ -117,11 +117,34 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         string autoLoadPatchesPath = Path.Combine(FileHandler.GetDataPath(), "auto-load language patches");
         if (Directory.Exists(autoLoadPatchesPath))
         {
+            // JSON patches are loaded as-is
             foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.json"))
             {
                 string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
                 FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
                 provider.RegisterLanguagePatch(autoPatch);
+            }
+
+            // txt patches follow the `[Language Name]_[Language Code]_[Patch Name].txt` naming
+            // convention and are always applied OnInitialize
+            foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.txt"))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(filePath);
+                string[] nameParts = fileName.Split('_');
+                if (nameParts.Length < 3)
+                {
+                    ModLog.Warn($"Skipping txt patch `{Path.GetFileName(filePath)}`: filename must follow `[Language Name]_[Language Code]_[Patch Name].txt` format.");
+                    continue;
+                }
+
+                string languageName = nameParts[0];
+                string languageCode = nameParts[1];
+                string patchName = string.Join("_", nameParts.Skip(2).ToArray());
+
+                LanguagePatch txtPatch = new(patchName, languageName, languageCode, [], LanguagePatch.PatchType.OnInitialize);
+                txtPatch.LoadText(File.ReadAllText(filePath));
+                provider.RegisterLanguagePatch(txtPatch);
+                ModLog.Info($"Auto-loaded txt language patch `{txtPatch.patchName}` for `{languageName}`.");
             }
         }
 
@@ -223,6 +246,20 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
 
         // Load each langauge patch that are loaded on initialization into CompiledLanguage object of corresponding language based on priority in config.
         LanguagePatchRegister.SortPatchOrder();
+
+        // remove disabled patches from the register so they are never compiled,
+        // triggered by flags, or applied to the game
+        foreach (string disabledPatchName in config.disabledPatches)
+        {
+            LanguagePatch disabledPatch = LanguagePatchRegister.AtName(disabledPatchName);
+            if (disabledPatch == null)
+                continue;
+
+            disabledPatch.UnregisterFlagEvent();
+            LanguagePatchRegister.RemovePatch(disabledPatch);
+            ModLog.Info($"Skipped disabled patch `{disabledPatch.patchName}`.");
+        }
+
         foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnInitialize))
         {
             patch.CompileText();
@@ -383,16 +420,19 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // check every flag-triggered patch and apply the patch if the flag is set to true
         foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnFlag))
         {
-            ModLogExtensions.WarnIfDebugBuild($"Checking flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`: {Core.Events.GetFlag(patch.patchFlag)}");
-            if (Core.Events.GetFlag(patch.patchFlag))
+            // normalize the flag id so save-entry checks match the runtime
+            // (Harmony SetFlag) path, where flags arrive already normalized.
+            string formattedFlag = LanguagePatch.FormatFlag(patch.patchFlag);
+            ModLogExtensions.WarnIfDebugBuild($"Checking flag-triggered patch `{patch.patchName}` with flag `{formattedFlag}`: {Core.Events.GetFlag(formattedFlag)}");
+            if (Core.Events.GetFlag(formattedFlag))
             {
-                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
-                patch.OnFlagChange(patch.patchFlag);
+                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{formattedFlag}`.");
+                patch.OnFlagChange(formattedFlag);
             }
             else
             {
-                ModLog.Info($"Deactivating flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
-                patch.OnFlagChange(patch.patchFlag);
+                ModLog.Info($"Deactivating flag-triggered patch `{patch.patchName}` with flag `{formattedFlag}`.");
+                patch.OnFlagChange(formattedFlag);
             }
         }
     }

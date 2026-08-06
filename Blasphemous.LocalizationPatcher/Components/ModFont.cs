@@ -75,6 +75,9 @@ public class ModFont
         ttfFont.name = TtfAssetName;
 
         //// load tmp asset
+        // TextMeshPro (TMP) font assets are NOT yet supported: only the regular TTF
+        // font is loaded from the AssetBundle, and the TMP font always falls back
+        // to the vanilla one (see README "Planned Features").
         //tmpFont = ab.LoadAllAssets<TMP_FontAsset>().FirstOrDefault();
         //tmpFont.name = TmpAssetName;
     }

@@ -162,9 +162,14 @@ internal class ModFontCommand : ModCommand
             return;
         }
 
-        Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName);
-
-        Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
+        if (Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName))
+        {
+            Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
+        }
+        else
+        {
+            Write($"Failed to apply system font `{fontName}` to `{languageName}`!");
+        }
     }
 
     private void Subcommand_Revert(string[] parameters)
@@ -206,6 +211,10 @@ internal class ModFontCommand : ModCommand
 
         // force localize the language in I2.Loc to apply the font change
         I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
+
+        // remove all recorded fonts for this language from persistence data,
+        // so the reverted fonts do not get restored after restarting the game
+        targetCompiledLanguage.RemoveAllRecordedFonts();
 
         Write($"Successfully reverted all mod fonts for `{languageName}`!");
     }

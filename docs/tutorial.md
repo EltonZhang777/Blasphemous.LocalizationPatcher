@@ -25,6 +25,11 @@ If you want to use a custom font (e.g., a pixel art font, a font with special gl
    - A TextMeshPro font asset
    - A meshed font asset
 
+   > **Note**: TextMeshPro / meshed font assets are **not supported yet** (see
+   > "Planned Features" in the README). Only the regular `.ttf` font is loaded
+   > from the AssetBundle; the TMP font of the language keeps using the game's
+   > default. Supplying a bundle without any `.ttf` font will skip that font.
+
 2. **Create a font info JSON file**
 
    Place a `.json` file with the font metadata in your `[Blasphemous directory]\Modding\data\LocalizationPatcher\` folder, following this structure:

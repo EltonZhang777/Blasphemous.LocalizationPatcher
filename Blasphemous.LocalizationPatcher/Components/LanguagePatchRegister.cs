@@ -53,6 +53,14 @@ public static class LanguagePatchRegister
     }
 
     /// <summary>
+    /// Remove a registered patch (e.g. patches disabled via config).
+    /// </summary>
+    internal static void RemovePatch(LanguagePatch patch)
+    {
+        _patches.Remove(patch);
+    }
+
+    /// <summary>
     /// Sort patching order first by mod order, then by patchOrder
     /// </summary>
     private static int PatchOrderSorter(LanguagePatch x, LanguagePatch y)
