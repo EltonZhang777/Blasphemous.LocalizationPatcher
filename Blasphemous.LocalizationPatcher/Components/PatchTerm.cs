@@ -28,7 +28,7 @@ public class PatchTerm
     /// Operation to be executed to the language term
     /// </summary>
     [JsonProperty]
-    [JsonConverter(typeof(StringEnumConverter))]
+    [JsonConverter(typeof(TermOperationJsonConverter))]
     public TermOperation termOperation;
 
     /// <summary>
@@ -54,7 +54,13 @@ public class PatchTerm
         /// <summary>
         /// Add your custom text as a suffix, attached to the end of the original text.
         /// </summary>
-        Suffix
+        Suffix,
+
+        /// <summary>
+        /// Fallback value used when a term operation string cannot be parsed. Terms with this
+        /// operation are skipped instead of crashing the whole patch.
+        /// </summary>
+        Invalid
     }
 
     private static readonly Dictionary<TermOperation, List<string>> _termOperationParseDict = new()
@@ -97,14 +103,14 @@ public class PatchTerm
         this.termContent = termContent;
         try
         {
-            this.termOperation = ParseToTermOperation(termOperation);
+            this.termOperation = PatchTerm.ParseToTermOperation(termOperation);
         }
         catch
         {
             ModLog.Error($"Invalid term operation `{termOperation}` for term `{termKey}`!");
             this.termKey = "";
             this.termContent = "";
-            this.termOperation = TermOperation.Prefix;
+            this.termOperation = TermOperation.Invalid;
         }
     }
 
@@ -127,8 +133,47 @@ public class PatchTerm
             }
         }
 
-        string errorMessage = $"Failed to parse termOperation to enum! Defaulting to `Replace`";
+        string errorMessage = $"Failed to parse termOperation to enum! Defaulting to Invalid. Input: {input}";
         ModLog.Error(errorMessage);
         throw new ArgumentException(errorMessage);
+    }
+
+    /// <summary>
+    /// JSON converter for <see cref="TermOperation"/> that accepts the txt aliases
+    /// (e.g. "AppendAtEnd" for Suffix) and degrades unknown values to
+    /// <see cref="TermOperation.Invalid"/> instead of throwing, so a single bad term
+    /// does not abort the whole patch load.
+    /// </summary>
+    internal class TermOperationJsonConverter : JsonConverter<TermOperation>
+    {
+        public override TermOperation ReadJson(
+            JsonReader reader,
+            Type objectType,
+            TermOperation existingValue,
+            bool hasExistingValue,
+            JsonSerializer serializer)
+        {
+            string raw = reader.Value as string;
+            if (string.IsNullOrEmpty(raw))
+                return TermOperation.Invalid;
+
+            try
+            {
+                return PatchTerm.ParseToTermOperation(raw, ignoreCase: true);
+            }
+            catch
+            {
+                ModLog.Warn($"Invalid term operation `{raw}` in patch JSON, skipping this term.");
+                return TermOperation.Invalid;
+            }
+        }
+
+        public override void WriteJson(
+            JsonWriter writer,
+            TermOperation value,
+            JsonSerializer serializer)
+        {
+            writer.WriteValue(value.ToString());
+        }
     }
 }

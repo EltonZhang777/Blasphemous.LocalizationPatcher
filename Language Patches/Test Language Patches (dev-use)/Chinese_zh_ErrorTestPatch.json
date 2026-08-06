@@ -1,0 +1,31 @@
+{
+  "patchName": "test_chinese_error_patch",
+  "languageName": "Chinese",
+  "languageCode": "zh",
+  "parentModId": "Blasphemous.LocalizationPatcher",
+  "patchOrder": 0,
+  "patchType": "OnInitialize",
+  "patchFlag": null,
+  "patchTerms": [
+    {
+      "termKey": "UI_Inventory/GRID_LABEL_PRAYERS",
+      "termContent": "aaa!!!!!!!",
+      "termOperation": "AppendAtEnd"
+    },
+    {
+      "termKey": "InvalidKey",
+      "termContent": "test1",
+      "termOperation": "Replace"
+    },
+    {
+      "termKey": "Prayer/PR03_DESCRIPTION",
+      "termContent": "test2",
+      "termOperation": "InvalidOperation"
+    },
+    {
+      "termKey": "Prayer/PR07_DESCRIPTION",
+      "termContent": "",
+      "termOperation": "Replace"
+    }
+  ]
+}

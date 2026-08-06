@@ -119,9 +119,16 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         {
             foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.json"))
             {
-                string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
-                FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
-                provider.RegisterLanguagePatch(autoPatch);
+                try
+                {
+                    string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
+                    FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
+                    provider.RegisterLanguagePatch(autoPatch);
+                }
+                catch (System.Exception error)
+                {
+                    ModLog.Error($"Failed to auto-load language patch `{Path.GetFileName(filePath)}`: {error.Message}. \nSkipping this file.");
+                }
             }
         }
 
