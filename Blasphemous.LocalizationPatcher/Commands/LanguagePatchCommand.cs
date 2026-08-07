@@ -118,9 +118,20 @@ internal class LanguagePatchCommand : ModCommand
         }
 
         LanguagePatch targetPatch = LanguagePatchRegister.Patches.ToList().First(x => x.patchName.Equals(parameters[0]));
-        File.WriteAllText(
-            Main.LocalizationPatcher.FileHandler.ContentFolder + $"{targetPatch.patchName}.json",
-            JsonConvert.SerializeObject(targetPatch, Formatting.Indented));
+
+        // ensure the content folder exists before writing the export file
+        string exportDirectory = Main.LocalizationPatcher.FileHandler.ContentFolder;
+        try
+        {
+            Directory.CreateDirectory(exportDirectory);
+            string exportPath = Path.Combine(exportDirectory, targetPatch.patchName + ".json");
+            File.WriteAllText(exportPath, JsonConvert.SerializeObject(targetPatch, Formatting.Indented));
+        }
+        catch (Exception error)
+        {
+            Write($"Failed to export patch `{parameters[0]}`: {error.Message}");
+            return;
+        }
         Write($"Successfully exported selected language patch to `Modding/content/{Main.LocalizationPatcher.Name}/{targetPatch.patchName}.json`");
     }
 

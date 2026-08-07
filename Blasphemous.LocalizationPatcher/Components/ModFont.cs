@@ -34,6 +34,11 @@ public class ModFont
     /// </summary>
     public Font ttfFont;
 
+    /// <summary>
+    /// The AssetBundle this font was loaded from, kept alive until <see cref="Unload"/> is called.
+    /// </summary>
+    private AssetBundle _assetBundle;
+
     public string TmpAssetName => info.fontName + "_tmp";
     public string TtfAssetName => info.fontName + "_ttf";
 
@@ -52,6 +57,7 @@ public class ModFont
             ModLog.Error(errMsg);
             throw new System.ArgumentException(errMsg);
         }
+        _assetBundle = ab;
 
         ModLogExtensions.WarnIfDebugBuild($"Loading assetBundle!");
 #if DEBUG
@@ -70,6 +76,9 @@ public class ModFont
         if (ttfFont == null)
         {
             ModLog.Error($"No Font asset found in AssetBundle `{info.fileName}` for mod font `{info.fontName}`. Skipping this font.");
+            // release the bundle right away since this font will never be used (and will not be registered)
+            ab.Unload(true);
+            _assetBundle = null;
             return;
         }
         ttfFont.name = TtfAssetName;
@@ -80,6 +89,22 @@ public class ModFont
         // to the vanilla one (see README "Planned Features").
         //tmpFont = ab.LoadAllAssets<TMP_FontAsset>().FirstOrDefault();
         //tmpFont.name = TmpAssetName;
+    }
+
+    /// <summary>
+    /// Release the AssetBundle and all assets loaded from it (including <see cref="ttfFont"/>).
+    /// Call this when the mod font is no longer needed, e.g. when the mod is being unloaded.
+    /// After calling this, the ModFont must not be used anymore.
+    /// </summary>
+    public void Unload()
+    {
+        if (_assetBundle != null)
+        {
+            _assetBundle.Unload(true);
+            _assetBundle = null;
+        }
+        ttfFont = null;
+        tmpFont = null;
     }
 
     /// <summary>

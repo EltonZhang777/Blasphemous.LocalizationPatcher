@@ -119,6 +119,13 @@ public class PatchTerm
     /// </summary>
     public static TermOperation ParseToTermOperation(string input, bool ignoreCase = false)
     {
+        if (input == null)
+        {
+            string nullErrorMessage = "Failed to parse a null termOperation string!";
+            ModLog.Error(nullErrorMessage);
+            throw new ArgumentException(nullErrorMessage);
+        }
+
         foreach (KeyValuePair<TermOperation, List<string>> kvp in _termOperationParseDict)
         {
             if (!ignoreCase)
@@ -133,7 +140,7 @@ public class PatchTerm
             }
         }
 
-        string errorMessage = $"Failed to parse termOperation to enum! Defaulting to Invalid. Input: {input}";
+        string errorMessage = $"Failed to parse termOperation `{input}` into a valid TermOperation (expected one of: Replace, ReplaceAll, Prefix, Suffix).";
         ModLog.Error(errorMessage);
         throw new ArgumentException(errorMessage);
     }
