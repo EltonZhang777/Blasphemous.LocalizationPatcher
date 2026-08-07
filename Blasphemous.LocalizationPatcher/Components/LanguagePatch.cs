@@ -269,13 +269,39 @@ public class LanguagePatch
     }
 
     /// <summary>
+    /// Stop listening for flag changes. Used when the patch is disabled via config.
+    /// </summary>
+    internal void UnregisterFlagEvent()
+    {
+        if (Main.LocalizationPatcher?.EventHandler != null)
+        {
+            Main.LocalizationPatcher.EventHandler.OnFlagChange -= OnFlagChange;
+        }
+    }
+
+    /// <summary>
+    /// Format a flag id to the Blasphemous vanilla implementation 
+    /// so that different textual representations
+    /// (e.g. `my_flag` vs `MY FLAG`) compare equal. All flag comparisons must
+    /// go through this method.
+    /// </summary>
+    public static string FormatFlag(string flagId) => string.IsNullOrEmpty(flagId)
+        ? string.Empty
+        : flagId.Replace('_', ' ').ToUpper().Trim();
+
+    /// <summary>
     /// Apply the patch to game when the corresponding flag is set to true, remove patch when flag is set to false.
     /// </summary>
     protected internal void OnFlagChange(string flagId)
     {
-        patchFlag = patchFlag.Replace('_', ' ').ToUpper().Trim();
+        // normalize both ids so the comparison works regardless of who invoked
+        // this callback (Harmony SetFlag postfix or save-entry check).
+        // use a local variable instead of mutating the `patchFlag` field,
+        // so the original configured flag is preserved (e.g. for `export`).
+        flagId = FormatFlag(flagId);
+        string formattedPatchFlag = FormatFlag(patchFlag);
 
-        if (flagId != patchFlag)
+        if (flagId != formattedPatchFlag)
             return;
 
         if (Core.Events.GetFlag(flagId))

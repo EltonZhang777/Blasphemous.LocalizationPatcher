@@ -52,7 +52,7 @@ internal class LanguagePatchCommand : ModCommand
             Write($"All loaded language patches: ");
             foreach (LanguagePatch patch in LanguagePatchRegister.Patches)
             {
-                Write($"  {patch.patchName}");
+                Write($"  {patch.patchName} | type: {patch.patchType} | status: {(patch.isApplied ? "applied" : "inactive")}");
             }
         }
         else
@@ -62,7 +62,7 @@ internal class LanguagePatchCommand : ModCommand
                 Write($"All applied language patches: ");
                 foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.isApplied == true))
                 {
-                    Write($"  {patch.patchName}");
+                    Write($"  {patch.patchName} | type: {patch.patchType} | status: applied");
                 }
             }
             else if (parameters[0].Equals("inactive"))
@@ -70,7 +70,7 @@ internal class LanguagePatchCommand : ModCommand
                 Write($"All inactive language patches: ");
                 foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.isApplied == false))
                 {
-                    Write($"  {patch.patchName}");
+                    Write($"  {patch.patchName} | type: {patch.patchType} | status: inactive");
                 }
             }
         }
@@ -90,6 +90,15 @@ internal class LanguagePatchCommand : ModCommand
 
         // apply the patch to the specified language
         LanguagePatch targetPatch = LanguagePatchRegister.AtName(parameters[0]);
+
+        // prevent re-applying an already applied patch, which would stack
+        // Prefix/Suffix terms on top of themselves
+        if (targetPatch.isApplied)
+        {
+            Write($"Patch `{parameters[0]}` is already applied!");
+            return;
+        }
+
         targetPatch.CompileText();
         targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
 
