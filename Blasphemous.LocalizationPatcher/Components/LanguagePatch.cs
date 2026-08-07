@@ -87,7 +87,7 @@ public class LanguagePatch
     /// <summary>
     /// The corresponding languageIndex of the CompiledLanguage object
     /// </summary>
-    internal CompiledLanguage CompiledLanguage => Main.LocalizationPatcher.compiledLanguages.Find(l => l.languageName == languageName);
+    internal CompiledLanguage CompiledLanguage => Main.LocalizationPatcher.FindCompiledLanguage(languageName);
 
     /// <summary>
     /// Pass in the `fullText` parameter by `FileHandler.LoadDataAsText`. 
@@ -235,7 +235,7 @@ public class LanguagePatch
 
         // find the corresponding CompiledLanguage object
         // if not found, create one
-        if (Main.LocalizationPatcher.compiledLanguages.Find(l => l.languageName == languageName) == null)
+        if (Main.LocalizationPatcher.FindCompiledLanguage(languageName) == null)
         {
             Main.LocalizationPatcher.RegisterCompiledLanguageObject(languageName, languageCode);
         }
@@ -264,8 +264,12 @@ public class LanguagePatch
         }
 
         // record this patch to the CompiledLanguage object and update applied status
-        CompiledLanguage.patchesApplied.Add(patchName);
-        isApplied = true;
+        // (only when every term was compiled without error)
+        if (operationErrorCount == 0)
+        {
+            CompiledLanguage.patchesApplied.Add(patchName);
+            isApplied = true;
+        }
     }
 
     /// <summary>
@@ -291,7 +295,6 @@ public class LanguagePatch
             CompileText();
             CompiledLanguage.WriteAllTermsToGame();
             CompiledLanguage.RecordAppliedPatch(patchName);
-            isApplied = true;
         }
         else
         {

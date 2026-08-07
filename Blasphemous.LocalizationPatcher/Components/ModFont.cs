@@ -96,7 +96,8 @@ public class ModFont
         List<string> removedLanguages = [];
         foreach (string langName in info.supportedLanguages)
         {
-            if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == langName))
+            CompiledLanguage compiledLang = Main.LocalizationPatcher.FindCompiledLanguage(langName);
+            if (compiledLang == null)
             {
                 // if the language does not exist, mark it for removal
                 removedLanguages.Add(langName);
@@ -104,9 +105,7 @@ public class ModFont
             else
             {
                 // attach the font to the language
-                Main.LocalizationPatcher.compiledLanguages
-                    .First(x => x.languageName == langName)
-                    .modFonts.Add(this);
+                compiledLang.modFonts.Add(this);
             }
         }
 
