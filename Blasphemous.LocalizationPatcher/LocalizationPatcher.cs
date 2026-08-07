@@ -2,9 +2,9 @@ using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Commands;
 using Blasphemous.LocalizationPatcher.Components;
 using Blasphemous.LocalizationPatcher.Events;
-using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Blasphemous.ModdingAPI;
 using Blasphemous.ModdingAPI.Persistence;
+using Blasphemous.NewbieEltonLibs.Extensions.ModdingAPI;
 using Framework.Managers;
 using I2.Loc;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace Blasphemous.LocalizationPatcher;
 
 internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPersistenceData>
 {
-    internal L10NGlobalPersistenceData globalPersistenceData;
+    internal L10NGlobalPersistenceData globalPersistenceData = new();
 
     /// <summary>
     /// all terms keys in Blasphemous' localization service `I2.Loc`.
@@ -24,6 +24,20 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
     internal List<string> allPossibleKeys = [];
 
     internal List<CompiledLanguage> compiledLanguages = [];
+
+    /// <summary>
+    /// Term keys in I2.Loc used for the three font slots of each language.
+    /// </summary>
+    internal const string FontTermKey = "UI/FONT";
+    internal const string FontScrollTermKey = "UI/FONT_SCROLL";
+    internal const string FontTmpTermKey = "UI/FONT_TEXTMESH_PRO";
+
+    /// <summary>
+    /// Fallback fonts used for languages without a vanilla font record (non-vanilla languages).
+    /// </summary>
+    internal const string DefaultRegularFontName = "MajesticExtended_Pixel_Scroll";
+    internal const string DefaultTmpFontName = "MajesticExtended_FullLatin";
+
     internal static readonly List<string> vanillaLanguageNames =
         [
         "Spanish",
@@ -63,10 +77,10 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         { "Portuguese (Brazil)", "MajesticExtended_FullLatin" },
         { "Korean", "NeoDunggeunmo_korean_cutPro"}
     };
-    private readonly string _debugPatchFileName = "Debug_patch_localization_key_display.json";
+    private readonly string _keyIndexPatchFileName = "Debug_patch_localization_key_display.json";
     private LanguagePatch _debugPatch;
     private bool _firstMainMenuEnterFlag = true;
-    private string _selectedLangaugeInOptions;
+    private string _selectedLanguageInOptions;
 
     /// <summary>
     /// Loaded from `.cfg` file.
@@ -84,15 +98,20 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // load config
         config = ConfigHandler.Load<Config>();
 
-        if (!File.Exists(Path.GetFullPath(FileHandler.ModdingFolder + "data/" + base.Name + @"/" + _debugPatchFileName)))
+        // The debug patch file doubles as the term-key index for all languages, which speeds up
+        // key lookup. It is not required for the mod to function: if missing, all term keys are
+        // enumerated dynamically from I2.Loc sources in OnAllInitialized instead.
+        string keyIndexPatchFullPath = Path.Combine(Path.Combine(Path.Combine(FileHandler.ModdingFolder, "data"), Name), _keyIndexPatchFileName);
+        if (File.Exists(keyIndexPatchFullPath))
         {
-            string errorMessage = $"debug patch not found!";
-            ModLog.Error(errorMessage);
-            throw new FileNotFoundException(errorMessage);
+            FileHandler.LoadDataAsJson<LanguagePatch>(_keyIndexPatchFileName, out _debugPatch);
+            allPossibleKeys = _debugPatch.patchTerms.Select(x => x.termKey).Distinct().ToList();
+            ModLog.Info($"Loaded {allPossibleKeys.Count} term keys from key-index patch file.");
         }
-
-        FileHandler.LoadDataAsJson<LanguagePatch>(_debugPatchFileName, out _debugPatch);
-        allPossibleKeys = _debugPatch.patchTerms.Select(x => x.termKey).Distinct().ToList();
+        else
+        {
+            ModLog.Warn($"Term-key index patch file `{_keyIndexPatchFileName}` not found, falling back to dynamic key enumeration.");
+        }
     }
 
     protected override void OnRegisterServices(ModServiceProvider provider)
@@ -112,17 +131,50 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         string autoLoadPatchesPath = Path.Combine(FileHandler.GetDataPath(), "auto-load language patches");
         if (Directory.Exists(autoLoadPatchesPath))
         {
+            // JSON patches are loaded as-is
             foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.json"))
             {
-                string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
-                FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
-                provider.RegisterLanguagePatch(autoPatch);
+                try
+                {
+                    string relativePath = Path.Combine("auto-load language patches", Path.GetFileName(filePath));
+                    FileHandler.LoadDataAsJson<LanguagePatch>(relativePath, out LanguagePatch autoPatch);
+                    provider.RegisterLanguagePatch(autoPatch);
+                }
+                catch (System.Exception error)
+                {
+                    ModLog.Error($"Failed to auto-load language patch `{Path.GetFileName(filePath)}`: {error.Message}. \nSkipping this file.");
+                }
+            }
+
+            // txt patches follow the `[Language Name]_[Language Code]_[Patch Name].txt` naming
+            // convention and are always applied OnInitialize
+            foreach (string filePath in Directory.GetFiles(autoLoadPatchesPath, "*.txt"))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(filePath);
+                string[] nameParts = fileName.Split('_');
+                if (nameParts.Length < 3)
+                {
+                    ModLog.Warn($"Skipping txt patch `{Path.GetFileName(filePath)}`: filename must follow `[Language Name]_[Language Code]_[Patch Name].txt` format.");
+                    continue;
+                }
+
+                string languageName = nameParts[0];
+                string languageCode = nameParts[1];
+                string patchName = string.Join("_", nameParts.Skip(2).ToArray());
+
+                LanguagePatch txtPatch = new(patchName, languageName, languageCode, [], LanguagePatch.PatchType.OnInitialize);
+                txtPatch.LoadText(File.ReadAllText(filePath));
+                provider.RegisterLanguagePatch(txtPatch);
+                ModLog.Info($"Auto-loaded txt language patch `{txtPatch.patchName}` for `{languageName}`.");
             }
         }
 
 #if DEBUG
         // load debug test patch
-        provider.RegisterLanguagePatch(_debugPatch);
+        if (_debugPatch != null)
+        {
+            provider.RegisterLanguagePatch(_debugPatch);
+        }
 
         // load debug font
         List<string> debugFontNames =
@@ -139,9 +191,24 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
     {
         ModLog.Info($"Loaded {LanguagePatchRegister.Total} language patches from all mod registers");
 
+        // If the debug patch file was missing during OnInitialize, enumerate all term keys
+        // from I2.Loc sources so that key lookups still work. Must run before any
+        // CompiledLanguage object is constructed (they share the allPossibleKeys list).
+        if (allPossibleKeys.Count == 0)
+        {
+            ModLog.Info("Term-key index patch file missing, enumerating term keys from I2.Loc sources...");
+            List<string> enumeratedKeys = [];
+            foreach (LanguageSource source in I2LocManager.Sources)
+            {
+                enumeratedKeys.AddRange(source.GetTermsList());
+            }
+            allPossibleKeys.AddRange(enumeratedKeys.Distinct());
+            ModLog.Info($"Enumerated {allPossibleKeys.Count} term keys from I2.Loc sources.");
+        }
+
         // store the language selected by the player in settings, so that it can be restored after patching completes
-        _selectedLangaugeInOptions = I2LocManager.CurrentLanguage;
-        ModLog.Info($"Stored current language selection: {_selectedLangaugeInOptions}");
+        _selectedLanguageInOptions = I2LocManager.CurrentLanguage;
+        ModLog.Info($"Stored current language selection: {_selectedLanguageInOptions}");
 
         // Remove disabled languages in the game first
         ModLog.Info($"Removing all disabled languages of vanilla game:");
@@ -195,11 +262,23 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
 
         // validate and resolve mod patching order
         Main.ValidateAndResolveSortingOrder(ref config.patchingModOrder, LanguagePatchRegister.Patches.Select(x => x.parentModId).Distinct().ToList());
-        // save current config into the config file
-        ConfigHandler.Save<Config>(config);
 
         // Load each langauge patch that are loaded on initialization into CompiledLanguage object of corresponding language based on priority in config.
         LanguagePatchRegister.SortPatchOrder();
+
+        // remove disabled patches from the register so they are never compiled,
+        // triggered by flags, or applied to the game
+        foreach (string disabledPatchName in config.disabledPatches)
+        {
+            LanguagePatch disabledPatch = LanguagePatchRegister.AtName(disabledPatchName);
+            if (disabledPatch == null)
+                continue;
+
+            disabledPatch.UnregisterFlagEvent();
+            LanguagePatchRegister.RemovePatch(disabledPatch);
+            ModLog.Info($"Skipped disabled patch `{disabledPatch.patchName}`.");
+        }
+
         foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnInitialize))
         {
             patch.CompileText();
@@ -232,14 +311,17 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
             }
         }
 
-        // save current config into the config file
-        ConfigHandler.Save<Config>(config);
-
         // Write all modified terms in CompiledLanguage objects into the game by the assigned order.
         foreach (string langName in config.languageOrder)
         {
+            CompiledLanguage compiledLang = compiledLanguages.Find(l => l.languageName == langName);
+            if (compiledLang == null)
+            {
+                ModLog.Warn($"Language `{langName}` from `languageOrder` config not found among compiled languages, skipping.");
+                continue;
+            }
             // force write all if needRemoveVanillaLanguages is true
-            compiledLanguages.Find(l => l.languageName == langName).WriteAllTermsToGame(needRemoveVanillaLanguages);
+            compiledLang.WriteAllTermsToGame(needRemoveVanillaLanguages);
         }
 
 #if DEBUG
@@ -254,7 +336,10 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
             sb.AppendLine($"    language name: {allLanguageNames[i]}");
             sb.AppendLine($"    language code: {allLanguageCodes[i]}");
             int currentPatchCount = 0;
-            foreach (string patchName in compiledLanguages.Find(l => l.languageName == allLanguageNames[i]).patchesApplied)
+            CompiledLanguage compiledLang = compiledLanguages.Find(l => l.languageName == allLanguageNames[i]);
+            if (compiledLang == null)
+                continue;
+            foreach (string patchName in compiledLang.patchesApplied)
             {
                 currentPatchCount++;
                 sb.AppendLine($"#{currentPatchCount} patch for {allLanguageNames[i]}: {patchName}");
@@ -270,6 +355,7 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         }
 
         // final config save
+        // (single save point: all sorting orders have been resolved above)
         ConfigHandler.Save<Config>(config);
     }
 
@@ -300,7 +386,7 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
             || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(globalPersistenceData.languageOnStartup)))
         {
             // if not set or does not exist, use the stored language in game settings
-            globalPersistenceData.languageOnStartup = _selectedLangaugeInOptions;
+            globalPersistenceData.languageOnStartup = _selectedLanguageInOptions;
 
             if (string.IsNullOrEmpty(globalPersistenceData.languageOnStartup)
             || !Core.Localization.GetAllEnabledLanguages().Exists(x => x.Name.Equals(globalPersistenceData.languageOnStartup)))
@@ -360,16 +446,19 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         // check every flag-triggered patch and apply the patch if the flag is set to true
         foreach (LanguagePatch patch in LanguagePatchRegister.Patches.Where(x => x.patchType == LanguagePatch.PatchType.OnFlag))
         {
-            ModLogExtensions.WarnIfDebugBuild($"Checking flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`: {Core.Events.GetFlag(patch.patchFlag)}");
-            if (Core.Events.GetFlag(patch.patchFlag))
+            // normalize the flag id so save-entry checks match the runtime
+            // (Harmony SetFlag) path, where flags arrive already normalized.
+            string formattedFlag = LanguagePatch.FormatFlag(patch.patchFlag);
+            ModLogExtensions.WarnIfDebugBuild($"Checking flag-triggered patch `{patch.patchName}` with flag `{formattedFlag}`: {Core.Events.GetFlag(formattedFlag)}");
+            if (Core.Events.GetFlag(formattedFlag))
             {
-                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
-                patch.OnFlagChange(patch.patchFlag);
+                ModLog.Info($"Applying flag-triggered patch `{patch.patchName}` with flag `{formattedFlag}`.");
+                patch.OnFlagChange(formattedFlag);
             }
             else
             {
-                ModLog.Info($"Deactivating flag-triggered patch `{patch.patchName}` with flag `{patch.patchFlag}`.");
-                patch.OnFlagChange(patch.patchFlag);
+                ModLog.Info($"Deactivating flag-triggered patch `{patch.patchName}` with flag `{formattedFlag}`.");
+                patch.OnFlagChange(formattedFlag);
             }
         }
     }
@@ -386,6 +475,14 @@ internal class LocalizationPatcher : BlasMod, IGlobalPersistentMod<L10NGlobalPer
         CompiledLanguage compiledLang = new(langName, langCode);
         compiledLanguages.Add(compiledLang);
         return compiledLang;
+    }
+
+    /// <summary>
+    /// Find the CompiledLanguage object matching the specified language name, or null if not found.
+    /// </summary>
+    internal CompiledLanguage FindCompiledLanguage(string languageName)
+    {
+        return compiledLanguages.FirstOrDefault(x => x.languageName == languageName);
     }
 
     internal static void AddLanguageToGame(string langName, string langCode)

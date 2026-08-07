@@ -13,7 +13,6 @@ public static class LanguagePatchRegister
     private static readonly List<LanguagePatch> _patches = [];
     internal static IEnumerable<LanguagePatch> Patches => _patches;
     internal static int Total => _patches.Count;
-    internal static LanguagePatch AtIndex(int index) => _patches[index];
     internal static LanguagePatch AtName(string name)
     {
         try
@@ -50,6 +49,14 @@ public static class LanguagePatchRegister
     internal static void SortPatchOrder()
     {
         _patches.Sort(PatchOrderSorter);
+    }
+
+    /// <summary>
+    /// Remove a registered patch (e.g. patches disabled via config).
+    /// </summary>
+    internal static void RemovePatch(LanguagePatch patch)
+    {
+        _patches.Remove(patch);
     }
 
     /// <summary>

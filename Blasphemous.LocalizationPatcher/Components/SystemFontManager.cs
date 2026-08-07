@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Blasphemous.ModdingAPI;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -6,9 +7,26 @@ namespace Blasphemous.LocalizationPatcher.Components;
 
 internal class SystemFontManager
 {
-    internal IEnumerable<string> AllSystemFonts => Font.GetOSInstalledFontNames();
+    private string[] _cachedSystemFontNames;
+
+    internal IEnumerable<string> AllSystemFonts => _cachedSystemFontNames ??= Font.GetOSInstalledFontNames();
 
     internal Dictionary<string, Font> loadedSystemFonts = [];
+
+    /// <summary>
+    /// Destroy all dynamically created system fonts and clear the cache.
+    /// Call this when the mod is being unloaded.
+    /// </summary>
+    internal void UnloadAllSystemFonts()
+    {
+        foreach (Font font in loadedSystemFonts.Values)
+        {
+            if (font != null)
+                UObject.Destroy(font);
+        }
+        loadedSystemFonts.Clear();
+        _cachedSystemFontNames = null;
+    }
 
     internal bool HasSystemFont(string fontName) => AllSystemFonts.Contains(fontName);
     internal bool HasLoadedSystemFont(string fontName) => TryGetLoadedSystemFont(fontName, out Font font) && (font != null);
@@ -44,7 +62,12 @@ internal class SystemFontManager
         if (!loadedSystemFonts.Keys.Contains(fontName))
             return false;
 
-        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == langName);
+        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.FirstOrDefault(x => x.languageName == langName);
+        if (targetCompiledLanguage == null)
+        {
+            ModLog.Warn($"Language `{langName}` not found when applying system font `{fontName}`!");
+            return false;
+        }
 
         // validate the font is applicable to the language
         // WIP, can probably use `Font.HasCharacter` or `Font.characterInfo`

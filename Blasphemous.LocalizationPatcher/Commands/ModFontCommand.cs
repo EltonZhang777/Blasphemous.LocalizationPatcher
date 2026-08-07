@@ -3,7 +3,6 @@ using Blasphemous.LocalizationPatcher.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Blasphemous.LocalizationPatcher.Commands;
 
@@ -28,7 +27,7 @@ internal class ModFontCommand : ModCommand
 
     private void SubCommand_Help(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 0))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
             return;
 
         Write($"Available {CommandName} commands:");
@@ -44,7 +43,7 @@ internal class ModFontCommand : ModCommand
 
     private void SubCommand_List(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, [0, 1, 2]))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, [0, 1, 2]))
             return;
 
         if (parameters.Length == 0)
@@ -58,14 +57,14 @@ internal class ModFontCommand : ModCommand
         else if (parameters.Length == 1)
         {
             string languageName = parameters[0];
-            if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+            CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.FindCompiledLanguage(languageName);
+            if (targetCompiledLanguage == null)
             {
                 Write($"Language `{languageName}` not found!");
                 return;
             }
 
             Write($"All loaded mod fonts for `{languageName}`: ");
-            CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
             foreach (ModFont modFont in targetCompiledLanguage.modFonts)
             {
                 Write($"  {modFont.info.fontName}");
@@ -74,7 +73,8 @@ internal class ModFontCommand : ModCommand
         else if (parameters.Length == 2)
         {
             string languageName = parameters[0];
-            if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+            CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.FindCompiledLanguage(languageName);
+            if (targetCompiledLanguage == null)
             {
                 Write($"Language `{languageName}` not found!");
                 return;
@@ -86,7 +86,6 @@ internal class ModFontCommand : ModCommand
                 return;
             }
             Write($"Currently used fonts for `{languageName}`: ");
-            CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
             targetCompiledLanguage.GetCurrentFonts(out string regularFont, out string tmpFont);
             Write($"  regular font: {regularFont}");
             Write($"  TextMeshPro font: {tmpFont}");
@@ -96,7 +95,7 @@ internal class ModFontCommand : ModCommand
 
     private void SubCommand_Apply(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 2))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 2))
             return;
 
         string fontName = parameters[0].Replace("_", " ");
@@ -108,14 +107,14 @@ internal class ModFontCommand : ModCommand
             Write($"Mod font `{fontName}` not found!");
             return;
         }
-        if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.FindCompiledLanguage(languageName);
+        if (targetCompiledLanguage == null)
         {
             Write($"Language `{languageName}` not found!");
             return;
         }
 
         ModFont targetFont = ModFontRegister.AtName(fontName);
-        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
 
         // validate the font is applicable to the language
         if (!targetCompiledLanguage.modFonts.Exists(x => x.info.fontName == fontName))
@@ -132,7 +131,7 @@ internal class ModFontCommand : ModCommand
 
     private void SubCommand_ListSystemFonts(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 0))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
             return;
 
         Write($"All system fonts on this PC: ");
@@ -144,10 +143,10 @@ internal class ModFontCommand : ModCommand
 
     private void SubCommand_ApplySystemFont(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 2))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 2))
             return;
 
-        string fontName = parameters[0];
+        string fontName = parameters[0].Replace("_", " ");
         string languageName = parameters[1].Replace("_", " ");
 
         // validate font and language's existence
@@ -156,32 +155,36 @@ internal class ModFontCommand : ModCommand
             Write($"System font `{fontName}` not found on this PC!");
             return;
         }
-        if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+        if (Main.LocalizationPatcher.FindCompiledLanguage(languageName) == null)
         {
             Write($"Language `{languageName}` not found!");
             return;
         }
 
-        Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName);
-
-        Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
+        if (Main.LocalizationPatcher.SystemFontManager.TryApplySystemFont(fontName, languageName))
+        {
+            Write($"Successfully applied system font `{fontName}` to `{languageName}`!");
+        }
+        else
+        {
+            Write($"Failed to apply system font `{fontName}` to `{languageName}`!");
+        }
     }
 
     private void Subcommand_Revert(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 1))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
             return;
 
         string languageName = parameters[0].Replace("_", " ");
 
         // validate language's existence
-        if (!Main.LocalizationPatcher.compiledLanguages.Exists(x => x.languageName == languageName))
+        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.FindCompiledLanguage(languageName);
+        if (targetCompiledLanguage == null)
         {
             Write($"Language `{languageName}` not found!");
             return;
         }
-
-        CompiledLanguage targetCompiledLanguage = Main.LocalizationPatcher.compiledLanguages.First(x => x.languageName == languageName);
 
         // determine vanilla default fonts for this language
         string regularFont;
@@ -193,41 +196,25 @@ internal class ModFontCommand : ModCommand
         }
         else
         {
-            regularFont = "MajesticExtended_Pixel_Scroll";
-            tmpFont = "MajesticExtended_FullLatin";
+            regularFont = LocalizationPatcher.DefaultRegularFontName;
+            tmpFont = LocalizationPatcher.DefaultTmpFontName;
         }
 
         // reset font terms to vanilla defaults
-        targetCompiledLanguage.TryUpdateTerm("UI/FONT", regularFont, PatchTerm.TermOperation.ReplaceAll);
-        targetCompiledLanguage.TryUpdateTerm("UI/FONT_SCROLL", regularFont, PatchTerm.TermOperation.ReplaceAll);
-        targetCompiledLanguage.TryUpdateTerm("UI/FONT_TEXTMESH_PRO", tmpFont, PatchTerm.TermOperation.ReplaceAll);
+        targetCompiledLanguage.TryUpdateTerm(LocalizationPatcher.FontTermKey, regularFont, PatchTerm.TermOperation.ReplaceAll);
+        targetCompiledLanguage.TryUpdateTerm(LocalizationPatcher.FontScrollTermKey, regularFont, PatchTerm.TermOperation.ReplaceAll);
+        targetCompiledLanguage.TryUpdateTerm(LocalizationPatcher.FontTmpTermKey, tmpFont, PatchTerm.TermOperation.ReplaceAll);
 
-        targetCompiledLanguage.WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
+        targetCompiledLanguage.WriteTermsToGame([LocalizationPatcher.FontTermKey, LocalizationPatcher.FontScrollTermKey, LocalizationPatcher.FontTmpTermKey]);
 
         // force localize the language in I2.Loc to apply the font change
         I2LocManager.SetLanguageAndCode(languageName, I2LocManager.GetLanguageCode(languageName), true, true);
 
+        // remove all recorded fonts for this language from persistence data,
+        // so the reverted fonts do not get restored after restarting the game
+        targetCompiledLanguage.RemoveAllRecordedFonts();
+
         Write($"Successfully reverted all mod fonts for `{languageName}`!");
     }
 
-    private bool ValidateParameterList(string[] parameters, List<int> validParameterLengths)
-    {
-        if (!validParameterLengths.Contains(parameters.Length))
-        {
-            StringBuilder sb = new();
-            sb.Append($"This command takes ");
-            for (int i = 0; i < validParameterLengths.Count; i++)
-            {
-                sb.Append($"{i} ");
-                if (i != validParameterLengths.Count - 1)
-                    sb.Append("or ");
-            }
-            sb.Append($"parameters.  You passed {parameters.Length}");
-            Write(sb.ToString());
-
-            return false;
-        }
-
-        return true;
-    }
 }

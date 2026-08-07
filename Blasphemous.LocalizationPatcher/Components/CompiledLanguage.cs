@@ -145,12 +145,24 @@ public class CompiledLanguage
     /// <param name="termKey">Key of the term that needs to be updated</param>
     public bool TryWriteTermToGame(string termKey)
     {
+        int index = termKeys.IndexOf(termKey);
+        if (index < 0)
+        {
+            ModLog.Warn($"Term key `{termKey}` is not registered in compiled language `{languageName}`, skipping this term.");
+            return false;
+        }
+
+        if (_languageIndex < 0)
+        {
+            ModLog.Warn($"Language `{languageName}` has an invalid I2.Loc index (-1), skipping write of term `{termKey}`.");
+            return false;
+        }
+
         bool result = false;
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
-            int index = termKeys.IndexOf(termKey);
             if (allAvailableTerms.Contains(termKey))
             {
                 result = true;
@@ -172,22 +184,52 @@ public class CompiledLanguage
         if (keys.Count == 0)
             return;
 
+        // The language must have a valid I2.Loc index, otherwise every write would throw.
+        if (_languageIndex < 0)
+        {
+            ModLog.Error($"Cannot write terms to game for language `{languageName}` because its I2.Loc index is invalid (-1).");
+            return;
+        }
+
         int successfulCount = 0;
         int keyErrorCount = 0;
 
         // documenting whether a term isn't patched till the end due to its key being nonexistent.
         // true => this term has keyError
         List<bool> keyErrorFlags = [.. Enumerable.Repeat(false, keys.Count)];
+        // whether a key was found in at least one I2.Loc source
+        List<bool> foundInAnySourceFlags = [.. Enumerable.Repeat(false, keys.Count)];
 
+        // write terms directly per source to avoid re-enumerating all sources for every key.
+        // (This replaces the previous O(S * K * S) nested loop over TryWriteTermToGame.)
         foreach (LanguageSource source in I2LocManager.Sources)
         {
+            List<string> allAvailableTerms = source.GetTermsList();
             for (int i = 0; i < keys.Count; i++)
             {
-                if (!TryWriteTermToGame(keys[i]))
+                string termKey = keys[i];
+                int termIndex = termKeys.IndexOf(termKey);
+                if (termIndex < 0)
                 {
+                    // key not registered in this compiled language: keep the same error semantics
+                    // as TryWriteTermToGame (returns false, does not crash).
                     keyErrorFlags[i] = true;
+                    continue;
+                }
+
+                if (allAvailableTerms.Contains(termKey))
+                {
+                    foundInAnySourceFlags[i] = true;
+                    source.GetTermData(termKey).Languages[_languageIndex] = termPrefixes[termIndex] + termContents[termIndex] + termSuffixes[termIndex];
                 }
             }
+        }
+
+        // mark keys that were registered but not found in any I2.Loc source as errors
+        for (int i = 0; i < foundInAnySourceFlags.Count; i++)
+        {
+            if (!foundInAnySourceFlags[i])
+                keyErrorFlags[i] = true;
         }
 
         // Error logging
@@ -230,7 +272,14 @@ public class CompiledLanguage
             return;
         }
 
-        WriteTermsToGame(LanguagePatchRegister.AtName(patchName).patchTerms.Select(x => x.termKey).ToList());
+        LanguagePatch patch = LanguagePatchRegister.AtName(patchName);
+        if (patch == null)
+        {
+            ModLog.Warn($"Patch `{patchName}` not found in registry, cannot write it to game.");
+            return;
+        }
+
+        WriteTermsToGame(patch.patchTerms.Select(x => x.termKey).ToList());
     }
 
     /// <summary>
@@ -257,7 +306,13 @@ public class CompiledLanguage
         // Re-apply remaining patches in their original order
         foreach (string remainingPatchName in remainingPatches)
         {
-            LanguagePatchRegister.AtName(remainingPatchName).CompileText();
+            LanguagePatch remainingPatch = LanguagePatchRegister.AtName(remainingPatchName);
+            if (remainingPatch == null)
+            {
+                ModLog.Warn($"Patch `{remainingPatchName}` not found in registry while re-applying after removing `{patchName}`.");
+                continue;
+            }
+            remainingPatch.CompileText();
         }
 
         // Write the final state to game
@@ -278,7 +333,13 @@ public class CompiledLanguage
         List<string> allModifiedTermKeys = [];
         foreach (string patchName in patchesApplied)
         {
-            allModifiedTermKeys.AddRange(LanguagePatchRegister.AtName(patchName).patchTerms.Select(x => x.termKey));
+            LanguagePatch patch = LanguagePatchRegister.AtName(patchName);
+            if (patch == null)
+            {
+                ModLog.Warn($"Patch `{patchName}` not found in registry when collecting terms for {languageName}.");
+                continue;
+            }
+            allModifiedTermKeys.AddRange(patch.patchTerms.Select(x => x.termKey));
         }
         allModifiedTermKeys = allModifiedTermKeys.Distinct().ToList();
 
@@ -308,12 +369,24 @@ public class CompiledLanguage
     /// <param name="termKey">Key of the term that needs to be updated</param>
     public bool TryReadTermFromGame(string termKey)
     {
+        int index = termKeys.IndexOf(termKey);
+        if (index < 0)
+        {
+            ModLog.Warn($"Term key `{termKey}` is not registered in compiled language `{languageName}`, skipping this term.");
+            return false;
+        }
+
+        if (_languageIndex < 0)
+        {
+            ModLog.Warn($"Language `{languageName}` has an invalid I2.Loc index (-1), skipping read of term `{termKey}`.");
+            return false;
+        }
+
         bool result = false;
 
         foreach (LanguageSource source in I2LocManager.Sources)
         {
             List<string> allAvailableTerms = source.GetTermsList();
-            int index = termKeys.IndexOf(termKey);
             if (allAvailableTerms.Contains(termKey))
             {
                 termContents[index] = source.GetTermData(termKey).Languages[_languageIndex];
@@ -353,9 +426,25 @@ public class CompiledLanguage
     /// </summary>
     public void RestoreOriginalTermsToGame()
     {
+        // collect all term keys modified by the applied patches BEFORE clearing the list,
+        // so that only those terms are reverted. Fonts (e.g. UI/FONT) applied separately
+        // are left untouched.
+        List<string> allModifiedTermKeys = [];
+        foreach (string patchName in patchesApplied)
+        {
+            LanguagePatch patch = LanguagePatchRegister.AtName(patchName);
+            if (patch == null)
+            {
+                ModLog.Warn($"Patch `{patchName}` not found in registry when restoring {languageName}!");
+                continue;
+            }
+            allModifiedTermKeys.AddRange(patch.patchTerms.Select(x => x.termKey));
+        }
+        allModifiedTermKeys = allModifiedTermKeys.Distinct().ToList();
+
         ResetTermsToOriginal();
         patchesApplied = [];
-        WriteAllTermsToGame();
+        WriteTermsToGame(allModifiedTermKeys);
 
         // record change to save data
         RemoveAllRecordedPatches();
@@ -368,7 +457,12 @@ public class CompiledLanguage
     /// </summary>
     internal void ResetTermsToOriginal()
     {
-        termContents = _originalTermContentsBackup.ToList();
+        // The backup may be empty or shorter than termKeys for languages that were dynamically
+        // created by patches and never read from the game. Pad with empty contents so that
+        // parallel lists always match termKeys.Count and termContents[index] never throws.
+        termContents = _originalTermContentsBackup.Count == termKeys.Count
+            ? _originalTermContentsBackup.ToList()
+            : [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
         termPrefixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
         termSuffixes = [.. Enumerable.Repeat(string.Empty, termKeys.Count)];
     }
@@ -427,12 +521,12 @@ public class CompiledLanguage
         else if (IsVanillaLanguage)
         {
             regularFontUsed = LocalizationPatcher.vanillaRegularFontNames[languageName];
-            ModLog.Error($"Modded regular font `{modFont?.TtfAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
+            ModLog.Warn($"Modded regular font `{modFont?.TtfAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
         }
         else
         {
-            regularFontUsed = "MajesticExtended_Pixel_Scroll";
-            ModLog.Error($"No default font found for language {languageName}, using default English font `{regularFontUsed}`.");
+            regularFontUsed = LocalizationPatcher.DefaultRegularFontName;
+            ModLog.Warn($"No default font found for language {languageName}, using default English font `{regularFontUsed}`.");
         }
 
         string tmpFontUsed;
@@ -443,20 +537,20 @@ public class CompiledLanguage
         else if (IsVanillaLanguage)
         {
             tmpFontUsed = LocalizationPatcher.vanillaTmpFontNames[languageName];
-            ModLog.Error($"Modded TextMeshPro font `{modFont?.TmpAssetName}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
+            ModLog.Warn($"Modded TextMeshPro font `{modFont?.TmpAssetName}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
         }
         else
         {
-            tmpFontUsed = "MajesticExtended_FullLatin";
-            ModLog.Error($"No default font found for language {languageName}, using default English font `{tmpFontUsed}`.");
+            tmpFontUsed = LocalizationPatcher.DefaultTmpFontName;
+            ModLog.Warn($"No default font found for language {languageName}, using default English font `{tmpFontUsed}`.");
         }
 
         // update the fonts to I2.Loc manager
-        TryUpdateTerm("UI/FONT", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
-        TryUpdateTerm("UI/FONT_SCROLL", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
-        TryUpdateTerm("UI/FONT_TEXTMESH_PRO", tmpFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontTermKey, regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontScrollTermKey, regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontTmpTermKey, tmpFontUsed, PatchTerm.TermOperation.ReplaceAll);
 
-        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
+        WriteTermsToGame([LocalizationPatcher.FontTermKey, LocalizationPatcher.FontScrollTermKey, LocalizationPatcher.FontTmpTermKey]);
 
         // force localize the language in I2.Loc to apply the font
         RefreshLocalizationLanguage();
@@ -474,10 +568,10 @@ public class CompiledLanguage
             return;
 
         // update the fonts to I2.Loc manager
-        TryUpdateTerm("UI/FONT", fontName, PatchTerm.TermOperation.ReplaceAll);
-        TryUpdateTerm("UI/FONT_SCROLL", fontName, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontTermKey, fontName, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontScrollTermKey, fontName, PatchTerm.TermOperation.ReplaceAll);
 
-        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL"]);
+        WriteTermsToGame([LocalizationPatcher.FontTermKey, LocalizationPatcher.FontScrollTermKey]);
 
         // force localize the language in I2.Loc to apply the font
         RefreshLocalizationLanguage();
@@ -491,9 +585,30 @@ public class CompiledLanguage
     /// </summary>
     public void GetCurrentFonts(out string regularFontUsed, out string tmpFontUsed)
     {
-        // get the current fonts used in I2.Loc
-        regularFontUsed = I2LocManager.GetTermData("UI/FONT").Languages[_languageIndex];
-        tmpFontUsed = I2LocManager.GetTermData("UI/FONT_TEXTMESH_PRO").Languages[_languageIndex];
+        // get the current fonts used in I2.Loc, falling back to `Unknown` if unavailable
+        regularFontUsed = ReadFontTermFromGame(LocalizationPatcher.FontTermKey);
+        tmpFontUsed = ReadFontTermFromGame(LocalizationPatcher.FontTmpTermKey);
+    }
+
+    /// <summary>
+    /// Read a single font term from I2.Loc for this language, or `Unknown` if it is missing.
+    /// </summary>
+    private string ReadFontTermFromGame(string termKey)
+    {
+        if (_languageIndex < 0)
+        {
+            ModLog.Warn($"Language `{languageName}` has an invalid I2.Loc index (-1), cannot read font term `{termKey}`.");
+            return "Unknown";
+        }
+
+        TermData termData = I2LocManager.GetTermData(termKey);
+        if (termData == null || _languageIndex >= termData.Languages.Length)
+        {
+            ModLog.Warn($"Font term `{termKey}` not found in localization for language `{languageName}`, returning `Unknown`.");
+            return "Unknown";
+        }
+
+        return termData.Languages[_languageIndex];
     }
 
     /// <summary>
@@ -502,12 +617,23 @@ public class CompiledLanguage
     /// </summary>
     internal void UpdateLanguageIndex()
     {
+        if (I2LocManager.Sources == null || I2LocManager.Sources.Count == 0)
+        {
+            ModLog.Error($"No I2.Loc sources available, cannot resolve language index for `{languageName}`.");
+            _languageIndex = -1;
+            return;
+        }
+
         LanguageSource source = I2LocManager.Sources[0];
         int index = source.GetLanguageIndex(languageName);
         if (index == -1)
         {
             LocalizationPatcher.AddLanguageToGame(languageName, languageCode);
             index = source.GetLanguageIndex(languageName);
+        }
+        if (index == -1)
+        {
+            ModLog.Error($"Language `{languageName}` was not registered in I2.Loc even after attempting to add it, language index stays at -1.");
         }
         _languageIndex = index;
     }
@@ -532,6 +658,11 @@ public class CompiledLanguage
         // refresh current language by switching to another language and switch back
         // determine the parent for executing coroutine. Use any MonoBehaviour as fallback for UIController.
         MonoBehaviour coroutineParent = UIController.instance ?? UObject.FindObjectOfType<MonoBehaviour>();
+        if (coroutineParent == null)
+        {
+            ModLog.Warn($"Cannot refresh language `{languageName}`: no MonoBehaviour available to run the switching coroutine.");
+            return;
+        }
         if (I2LocManager.CurrentLanguage != "English")
         {
             // if current language isn't English, switch to English and switch back
