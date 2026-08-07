@@ -521,12 +521,12 @@ public class CompiledLanguage
         else if (IsVanillaLanguage)
         {
             regularFontUsed = LocalizationPatcher.vanillaRegularFontNames[languageName];
-            ModLog.Error($"Modded regular font `{modFont?.TtfAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
+            ModLog.Warn($"Modded regular font `{modFont?.TtfAssetName}` does not exist for language {languageName}, using default font `{regularFontUsed}`.");
         }
         else
         {
-            regularFontUsed = "MajesticExtended_Pixel_Scroll";
-            ModLog.Error($"No default font found for language {languageName}, using default English font `{regularFontUsed}`.");
+            regularFontUsed = LocalizationPatcher.DefaultRegularFontName;
+            ModLog.Warn($"No default font found for language {languageName}, using default English font `{regularFontUsed}`.");
         }
 
         string tmpFontUsed;
@@ -537,20 +537,20 @@ public class CompiledLanguage
         else if (IsVanillaLanguage)
         {
             tmpFontUsed = LocalizationPatcher.vanillaTmpFontNames[languageName];
-            ModLog.Error($"Modded TextMeshPro font `{modFont?.TmpAssetName}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
+            ModLog.Warn($"Modded TextMeshPro font `{modFont?.TmpAssetName}` does not exist for language {languageName}, using default font `{tmpFontUsed}`.");
         }
         else
         {
-            tmpFontUsed = "MajesticExtended_FullLatin";
-            ModLog.Error($"No default font found for language {languageName}, using default English font `{tmpFontUsed}`.");
+            tmpFontUsed = LocalizationPatcher.DefaultTmpFontName;
+            ModLog.Warn($"No default font found for language {languageName}, using default English font `{tmpFontUsed}`.");
         }
 
         // update the fonts to I2.Loc manager
-        TryUpdateTerm("UI/FONT", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
-        TryUpdateTerm("UI/FONT_SCROLL", regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
-        TryUpdateTerm("UI/FONT_TEXTMESH_PRO", tmpFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontTermKey, regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontScrollTermKey, regularFontUsed, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontTmpTermKey, tmpFontUsed, PatchTerm.TermOperation.ReplaceAll);
 
-        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL", "UI/FONT_TEXTMESH_PRO"]);
+        WriteTermsToGame([LocalizationPatcher.FontTermKey, LocalizationPatcher.FontScrollTermKey, LocalizationPatcher.FontTmpTermKey]);
 
         // force localize the language in I2.Loc to apply the font
         RefreshLocalizationLanguage();
@@ -568,10 +568,10 @@ public class CompiledLanguage
             return;
 
         // update the fonts to I2.Loc manager
-        TryUpdateTerm("UI/FONT", fontName, PatchTerm.TermOperation.ReplaceAll);
-        TryUpdateTerm("UI/FONT_SCROLL", fontName, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontTermKey, fontName, PatchTerm.TermOperation.ReplaceAll);
+        TryUpdateTerm(LocalizationPatcher.FontScrollTermKey, fontName, PatchTerm.TermOperation.ReplaceAll);
 
-        WriteTermsToGame(["UI/FONT", "UI/FONT_SCROLL"]);
+        WriteTermsToGame([LocalizationPatcher.FontTermKey, LocalizationPatcher.FontScrollTermKey]);
 
         // force localize the language in I2.Loc to apply the font
         RefreshLocalizationLanguage();
@@ -586,8 +586,8 @@ public class CompiledLanguage
     public void GetCurrentFonts(out string regularFontUsed, out string tmpFontUsed)
     {
         // get the current fonts used in I2.Loc, falling back to `Unknown` if unavailable
-        regularFontUsed = ReadFontTermFromGame("UI/FONT");
-        tmpFontUsed = ReadFontTermFromGame("UI/FONT_TEXTMESH_PRO");
+        regularFontUsed = ReadFontTermFromGame(LocalizationPatcher.FontTermKey);
+        tmpFontUsed = ReadFontTermFromGame(LocalizationPatcher.FontTmpTermKey);
     }
 
     /// <summary>

@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Blasphemous.LocalizationPatcher.Components;
 
@@ -117,7 +116,7 @@ public class PatchTerm
     /// <summary>
     /// Parse string to <see cref="TermOperation"/>
     /// </summary>
-    public static TermOperation ParseToTermOperation(string input, bool ignoreCase = false)
+    public static TermOperation ParseToTermOperation(string input)
     {
         if (input == null)
         {
@@ -128,16 +127,8 @@ public class PatchTerm
 
         foreach (KeyValuePair<TermOperation, List<string>> kvp in _termOperationParseDict)
         {
-            if (!ignoreCase)
-            {
-                if (kvp.Value.Contains(input))
-                    return kvp.Key;
-            }
-            else
-            {
-                if (kvp.Value.Select(x => x.ToLower()).Contains(input.ToLower()))
-                    return kvp.Key;
-            }
+            if (kvp.Value.Contains(input))
+                return kvp.Key;
         }
 
         string errorMessage = $"Failed to parse termOperation `{input}` into a valid TermOperation (expected one of: Replace, ReplaceAll, Prefix, Suffix).";
@@ -166,7 +157,7 @@ public class PatchTerm
 
             try
             {
-                return PatchTerm.ParseToTermOperation(raw, ignoreCase: true);
+                return PatchTerm.ParseToTermOperation(raw);
             }
             catch
             {

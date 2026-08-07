@@ -18,7 +18,6 @@ internal class LocalizationManager_RetrieveModAsset_Patch
     [HarmonyPrefix]
     public static bool Prefix(string value, ref UObject __result)
     {
-        //Main.LogIfDebug($"LocalizationManager.FindAsset({value})");
         ModFont matchingModFont;
 
         // check if I2.Loc is querying for a regular font asset of a mod font

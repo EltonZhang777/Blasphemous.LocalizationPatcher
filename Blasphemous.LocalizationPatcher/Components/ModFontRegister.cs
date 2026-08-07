@@ -12,7 +12,6 @@ public static class ModFontRegister
     private static readonly List<ModFont> _modFonts = [];
     internal static IEnumerable<ModFont> ModFonts => _modFonts;
     internal static int Total => _modFonts.Count;
-    internal static ModFont AtIndex(int index) => _modFonts[index];
     internal static ModFont AtName(string name)
     {
         try
@@ -21,7 +20,7 @@ public static class ModFontRegister
         }
         catch
         {
-            ModLog.Warn($"Queried nonexistent patch `{name}`");
+            ModLog.Warn($"Queried nonexistent mod font `{name}`");
             return null;
         }
     }

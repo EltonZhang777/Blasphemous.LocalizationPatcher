@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Blasphemous.LocalizationPatcher.Commands;
 
@@ -30,7 +29,7 @@ internal class LanguagePatchCommand : ModCommand
 
     private void SubCommand_Help(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 0))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
             return;
 
         Write($"Available {CommandName} commands:");
@@ -44,7 +43,7 @@ internal class LanguagePatchCommand : ModCommand
 
     private void SubCommand_List(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, [0, 1]))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, [0, 1]))
             return;
 
         if (parameters.Length == 0)
@@ -78,46 +77,52 @@ internal class LanguagePatchCommand : ModCommand
 
     private void SubCommand_Apply(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 1))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
             return;
 
+        // patch names are normalized to underscores (spaces in names become `_`), so normalize the command parameter too
+        string patchName = parameters[0].Trim().Replace(' ', '_');
+
         // validate the specified patch's existence
-        if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(parameters[0])))
+        if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(patchName)))
         {
-            Write($"Patch `{parameters[0]}` not found!");
+            Write($"Patch `{patchName}` not found!");
             return;
         }
 
         // apply the patch to the specified language
-        LanguagePatch targetPatch = LanguagePatchRegister.AtName(parameters[0]);
+        LanguagePatch targetPatch = LanguagePatchRegister.AtName(patchName);
 
         // prevent re-applying an already applied patch, which would stack
         // Prefix/Suffix terms on top of themselves
         if (targetPatch.isApplied)
         {
-            Write($"Patch `{parameters[0]}` is already applied!");
+            Write($"Patch `{patchName}` is already applied!");
             return;
         }
 
         targetPatch.CompileText();
         targetPatch.CompiledLanguage.WritePatchToGame(targetPatch.patchName);
 
-        Write($"Successfully applied patch {parameters[0]}!");
+        Write($"Successfully applied patch {patchName}!");
         Write($"Manual patches applied through commands are only active until exiting game process");
     }
 
     private void SubCommand_ExportToJson(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 1))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
             return;
 
-        if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(parameters[0])))
+        // patch names are normalized to underscores (spaces in names become `_`), so normalize the command parameter too
+        string patchName = parameters[0].Trim().Replace(' ', '_');
+
+        if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(patchName)))
         {
-            Write($"Patch `{parameters[0]}` not found!");
+            Write($"Patch `{patchName}` not found!");
             return;
         }
 
-        LanguagePatch targetPatch = LanguagePatchRegister.Patches.ToList().First(x => x.patchName.Equals(parameters[0]));
+        LanguagePatch targetPatch = LanguagePatchRegister.Patches.ToList().First(x => x.patchName.Equals(patchName));
 
         // ensure the content folder exists before writing the export file
         string exportDirectory = Main.LocalizationPatcher.FileHandler.ContentFolder;
@@ -129,7 +134,7 @@ internal class LanguagePatchCommand : ModCommand
         }
         catch (Exception error)
         {
-            Write($"Failed to export patch `{parameters[0]}`: {error.Message}");
+            Write($"Failed to export patch `{patchName}`: {error.Message}");
             return;
         }
         Write($"Successfully exported selected language patch to `Modding/content/{Main.LocalizationPatcher.Name}/{targetPatch.patchName}.json`");
@@ -137,28 +142,31 @@ internal class LanguagePatchCommand : ModCommand
 
     private void SubCommand_Remove(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 1))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
             return;
 
+        // patch names are normalized to underscores (spaces in names become `_`), so normalize the command parameter too
+        string patchName = parameters[0].Trim().Replace(' ', '_');
+
         // validate the specified patch's existence
-        if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(parameters[0])))
+        if (!LanguagePatchRegister.Patches.ToList().Exists(x => x.patchName.Equals(patchName)))
         {
-            Write($"Patch `{parameters[0]}` not found!");
+            Write($"Patch `{patchName}` not found!");
             return;
         }
 
         // validate the specified patch's applied state
-        LanguagePatch targetPatch = LanguagePatchRegister.AtName(parameters[0]);
+        LanguagePatch targetPatch = LanguagePatchRegister.AtName(patchName);
         if (!targetPatch.isApplied)
         {
-            Write($"Patch `{parameters[0]}` is not currently applied!");
+            Write($"Patch `{patchName}` is not currently applied!");
             return;
         }
 
         // remove the patch from the game
         targetPatch.CompiledLanguage.RemovePatchFromGame(targetPatch.patchName);
 
-        Write($"Successfully removed patch `{parameters[0]}` from game!");
+        Write($"Successfully removed patch `{patchName}` from game!");
         Write($"OnInitialize and OnFlag patches removed through commands are only deactivated until exiting game process");
     }
 
@@ -167,7 +175,7 @@ internal class LanguagePatchCommand : ModCommand
     /// </summary>
     private void SubCommand_RemoveAll(string[] parameters)
     {
-        if (!ValidateParameterList(parameters, 0))
+        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
             return;
 
         foreach (CompiledLanguage lang in Main.LocalizationPatcher.compiledLanguages)
@@ -177,24 +185,4 @@ internal class LanguagePatchCommand : ModCommand
         Write($"Successfully removed all applied language patches from game!");
     }
 
-    private bool ValidateParameterList(string[] parameters, List<int> validParameterLengths)
-    {
-        if (!validParameterLengths.Contains(parameters.Length))
-        {
-            StringBuilder sb = new();
-            sb.Append($"This command takes ");
-            for (int i = 0; i < validParameterLengths.Count; i++)
-            {
-                sb.Append($"{i} ");
-                if (i != validParameterLengths.Count - 1)
-                    sb.Append("or ");
-            }
-            sb.Append($"parameters.  You passed {parameters.Length}");
-            Write(sb.ToString());
-
-            return false;
-        }
-
-        return true;
-    }
 }
