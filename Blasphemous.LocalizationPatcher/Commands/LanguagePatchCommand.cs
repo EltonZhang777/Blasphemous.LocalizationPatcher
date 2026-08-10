@@ -1,51 +1,19 @@
-﻿using Blasphemous.CheatConsole;
-using Blasphemous.LocalizationPatcher.Components;
+﻿using Blasphemous.LocalizationPatcher.Components;
+using Blasphemous.NewbieEltonLibs.CheatConsole;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
 namespace Blasphemous.LocalizationPatcher.Commands;
 
-internal class LanguagePatchCommand : ModCommand
+internal class LanguagePatchCommand : AutoModCommand
 {
     protected override string CommandName => "languagepatch";
 
-    protected override bool AllowUppercase => true;
-
-    protected override Dictionary<string, Action<string[]>> AddSubCommands()
-    {
-        return new()
-        {
-            { "help", SubCommand_Help },
-            { "list", SubCommand_List },
-            { "apply", SubCommand_Apply },
-            { "remove", SubCommand_Remove },
-            { "removeall", SubCommand_RemoveAll },
-            { "export", SubCommand_ExportToJson }
-        };
-    }
-
-    private void SubCommand_Help(string[] parameters)
-    {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
-            return;
-
-        Write($"Available {CommandName} commands:");
-        Write($"{CommandName} list : list all loaded language patches");
-        Write($"{CommandName} list [applied/inactive] : list all applied/inactive language patches");
-        Write($"{CommandName} apply [patchName] : apply the specified language patch");
-        Write($"{CommandName} remove [patchName] : remove the specified language patch");
-        Write($"{CommandName} removeall : remove all applied language patches");
-        Write($"{CommandName} export [patchName]: export the specified language patch to `Modding/content/{Main.LocalizationPatcher.Name}/[patchName].json`");
-    }
-
+    [ModSubCommand("list", "list all loaded language patches", "[applied/inactive]", 0, 1)]
     private void SubCommand_List(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, [0, 1]))
-            return;
-
         if (parameters.Length == 0)
         {
             Write($"All loaded language patches: ");
@@ -75,11 +43,9 @@ internal class LanguagePatchCommand : ModCommand
         }
     }
 
+    [ModSubCommand("apply", "apply the specified language patch", "[patchName]", 1)]
     private void SubCommand_Apply(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
-            return;
-
         // patch names are normalized to underscores (spaces in names become `_`), so normalize the command parameter too
         string patchName = parameters[0].Trim().Replace(' ', '_');
 
@@ -108,11 +74,9 @@ internal class LanguagePatchCommand : ModCommand
         Write($"Manual patches applied through commands are only active until exiting game process");
     }
 
+    [ModSubCommand("export", "export the specified language patch to json", "[patchName]", 1)]
     private void SubCommand_ExportToJson(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
-            return;
-
         // patch names are normalized to underscores (spaces in names become `_`), so normalize the command parameter too
         string patchName = parameters[0].Trim().Replace(' ', '_');
 
@@ -140,11 +104,9 @@ internal class LanguagePatchCommand : ModCommand
         Write($"Successfully exported selected language patch to `Modding/content/{Main.LocalizationPatcher.Name}/{targetPatch.patchName}.json`");
     }
 
+    [ModSubCommand("remove", "remove the specified language patch", "[patchName]", 1)]
     private void SubCommand_Remove(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
-            return;
-
         // patch names are normalized to underscores (spaces in names become `_`), so normalize the command parameter too
         string patchName = parameters[0].Trim().Replace(' ', '_');
 
@@ -173,16 +135,13 @@ internal class LanguagePatchCommand : ModCommand
     /// <summary>
     /// Remove all applied language patches from the game by resetting all languages to default.
     /// </summary>
+    [ModSubCommand("removeall", "remove all applied language patches", null, 0)]
     private void SubCommand_RemoveAll(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
-            return;
-
         foreach (CompiledLanguage lang in Main.LocalizationPatcher.compiledLanguages)
         {
             lang.RestoreOriginalTermsToGame();
         }
         Write($"Successfully removed all applied language patches from game!");
     }
-
 }
