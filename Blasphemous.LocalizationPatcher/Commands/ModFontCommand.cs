@@ -1,51 +1,16 @@
-using Blasphemous.CheatConsole;
 using Blasphemous.LocalizationPatcher.Components;
-using System;
-using System.Collections.Generic;
+using Blasphemous.NewbieEltonLibs.CheatConsole;
 using System.Linq;
 
 namespace Blasphemous.LocalizationPatcher.Commands;
 
-internal class ModFontCommand : ModCommand
+internal class ModFontCommand : AutoModCommand
 {
     protected override string CommandName => "font";
 
-    protected override bool AllowUppercase => true;
-
-    protected override Dictionary<string, Action<string[]>> AddSubCommands()
-    {
-        return new()
-        {
-            { "help", SubCommand_Help },
-            { "list", SubCommand_List },
-            { "revert", Subcommand_Revert },
-            { "apply", SubCommand_Apply },
-            { "listsystem", SubCommand_ListSystemFonts },
-            { "applysystem", SubCommand_ApplySystemFont }
-        };
-    }
-
-    private void SubCommand_Help(string[] parameters)
-    {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
-            return;
-
-        Write($"Available {CommandName} commands:");
-        Write($"{CommandName} list : list all loaded mod fonts");
-        Write($"{CommandName} list [languageName] : list all mod fonts applicable to the specified language");
-        Write($"{CommandName} list [languageName] [current]: show the currently used fonts of the specified language");
-        Write($"{CommandName} apply [fontName] [languageName]: apply the specified mod font to the specified language");
-        Write($"{CommandName} listsystem : list all system fonts installed on this PC");
-        Write($"{CommandName} applysystem [fontName] [languageName]: apply the specified system font to the specified language");
-        Write($"{CommandName} revert [languageName]: remove applied mod fonts for the specified language");
-        Write($"(Use underscore `_` to represent spaces in font and language names.)");
-    }
-
+    [ModSubCommand("list", "list all loaded mod fonts", "[languageName] [current]", 0, 1, 2)]
     private void SubCommand_List(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, [0, 1, 2]))
-            return;
-
         if (parameters.Length == 0)
         {
             Write($"All loaded mod fonts: ");
@@ -93,11 +58,9 @@ internal class ModFontCommand : ModCommand
         }
     }
 
+    [ModSubCommand("apply", "apply the specified mod font to the specified language", "[fontName] [languageName]", 2)]
     private void SubCommand_Apply(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 2))
-            return;
-
         string fontName = parameters[0].Replace("_", " ");
         string languageName = parameters[1].Replace("_", " ");
 
@@ -129,11 +92,9 @@ internal class ModFontCommand : ModCommand
         Write($"Successfully applied mod font `{fontName}` to `{languageName}`!");
     }
 
+    [ModSubCommand("listsystem", "list all system fonts installed on this PC", null, 0)]
     private void SubCommand_ListSystemFonts(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 0))
-            return;
-
         Write($"All system fonts on this PC: ");
         foreach (string fontName in Main.LocalizationPatcher.SystemFontManager.AllSystemFonts)
         {
@@ -141,11 +102,9 @@ internal class ModFontCommand : ModCommand
         }
     }
 
+    [ModSubCommand("applysystem", "apply the specified system font to the specified language", "[fontName] [languageName]", 2)]
     private void SubCommand_ApplySystemFont(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 2))
-            return;
-
         string fontName = parameters[0].Replace("_", " ");
         string languageName = parameters[1].Replace("_", " ");
 
@@ -171,11 +130,9 @@ internal class ModFontCommand : ModCommand
         }
     }
 
+    [ModSubCommand("revert", "remove applied mod fonts for the specified language", "[languageName]", 1)]
     private void Subcommand_Revert(string[] parameters)
     {
-        if (!CommandParameterHelper.ValidateParameterList(Write, parameters, 1))
-            return;
-
         string languageName = parameters[0].Replace("_", " ");
 
         // validate language's existence
@@ -216,5 +173,4 @@ internal class ModFontCommand : ModCommand
 
         Write($"Successfully reverted all mod fonts for `{languageName}`!");
     }
-
 }

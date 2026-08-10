@@ -98,11 +98,8 @@ public class ModFont
     /// </summary>
     public void Unload()
     {
-        if (_assetBundle != null)
-        {
-            _assetBundle.Unload(true);
-            _assetBundle = null;
-        }
+        _assetBundle?.Unload(true);
+        _assetBundle = null;
         ttfFont = null;
         tmpFont = null;
     }
