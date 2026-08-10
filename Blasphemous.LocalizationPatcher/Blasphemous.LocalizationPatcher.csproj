@@ -17,13 +17,18 @@
     <DocumentationFile>bin\Release\$(TargetName).xml</DocumentationFile>
     <RepositoryUrl>https://github.com/EltonZhang777/Blasphemous.LocalizationPatcher</RepositoryUrl>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <!-- Single source of truth for the prerequisite dependency version.
+         Used both by PackageReference (compile) and the packaging target (data/ dll copy),
+         so the shipped dll always matches the compiled dependency. -->
+    <NewbieEltonLibsVersion>0.2.1</NewbieEltonLibsVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Blasphemous.CheatConsole" Version="1.1.0" />
     <PackageReference Include="Blasphemous.GameLibs" Version="4.0.67" />
     <PackageReference Include="Blasphemous.ModdingAPI" Version="3.0.1" />
-    <PackageReference Include="Blasphemous.NewbieEltonLibs" Version="0.2.1" />
+    <PackageReference Include="Blasphemous.NewbieEltonLibs" Version="$(NewbieEltonLibsVersion)" />
   </ItemGroup>
 
   <Target Name="Development" AfterTargets="PostBuildEvent">
@@ -33,7 +38,10 @@
       <ResourcesFolder>$(SolutionDir)resources\</ResourcesFolder>
     </PropertyGroup>
     <ItemGroup>
-      <DataDlls Include="$(ResourcesFolder)data\*" />
+      <!-- Prerequisite dll is copied from the NuGet package (same version as the compile-time
+           reference), not from resources/data, so the shipped dll never drifts from the
+           dependency version declared in this csproj. -->
+      <DataDlls Include="$(NuGetPackageRoot)blasphemous.newbieeltonlibs\$(NewbieEltonLibsVersion)\lib\net35\Blasphemous.NewbieEltonLibs.dll" />
       <DataFiles Include="$(ResourcesFolder)data\$(Product)\**\*" />
       <Levels Include="$(ResourcesFolder)levels\$(Product)\*" />
       <Localization Include="$(ResourcesFolder)localization\*" />

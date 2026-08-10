@@ -48,6 +48,17 @@ jobs:
         dotnet restore
         dotnet build --configuration Release --no-restore
 
+    - name: Verify Prerequisite Dll
+      run: |
+        PREREQ_VERSION=$(grep -oP '<NewbieEltonLibsVersion>\K[^<]+' ${{ github.event.repository.name }}/${{ github.event.repository.name }}.csproj)
+        DLL_PATH="$HOME/.nuget/packages/blasphemous.newbieeltonlibs/$PREREQ_VERSION/lib/net35/Blasphemous.NewbieEltonLibs.dll"
+        if [ -f "$DLL_PATH" ]; then
+          echo "prerequisite dll OK: $DLL_PATH"
+        else
+          echo "prerequisite dll MISSING for v$PREREQ_VERSION: $DLL_PATH"
+          exit 1
+        fi
+
     - name: Export Settings
       run: |
         MOD_TITLE=$(grep -oP '<Title>\K[^<]+' ${{ github.event.repository.name }}/${{ github.event.repository.name }}.csproj)
